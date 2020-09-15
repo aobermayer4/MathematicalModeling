@@ -139,6 +139,7 @@ outputL
 plot(outputS[,2]~outputS[,1], 
      type = "b", 
      ylab = "Body Temperature (C)", 
+     ylim = c(30,35),
      xlab = "Time (hrs)",
      main = "Time for Body Temperature to Reach Equilibrium: Sqirrels vs Lizards")
 lines(outputL[,2]~outputL[,1],
