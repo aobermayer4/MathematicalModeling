@@ -5,7 +5,7 @@ date: "9/14/2020"
 output: html_document
 ---
 
-## **R Markdown**Assignment 2**
+## **Assignment 2**
 
 ## *Problem 1*
 
@@ -95,3 +95,74 @@ energy gains, which would be considered the optimal cutoff distance and thus
 part of the optimal foraging strategy for the predator. This can be biologically 
 informative as it would tell us which habitat might be better suited for 
 foraging for the species in question.
+
+## *Problem 2*
+
+Part 1:
+
+```{r}
+bee <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+20.19)
+net <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB[i] <<- net
+
+}
+}
+
+bumble <- bee(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb= 4.4, tw=3.3, tf=14.7, te=8.9, n=10)
+
+```
+
+```{r}
+position <- seq(from=1, to=10, length.out=10)
+
+plot(netB ~ position, type = "l", ylab = "Net Energy Intake Rate", xlab = "Last Flower Position Visited", col = "purple", main = "Bumblebee Energy Intake Rate Relating to Flower Position")
+```
+
+```{r}
+bee2 <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB2 <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+20.19)
+net2 <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB2[i] <<- net2
+
+}
+}
+
+bumble2 <- bee2(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb=0.5, tw=3.3, tf=14.7, te=8.9, n=10)
+
+```
+
+```{r}
+bee3 <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB3 <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+15)
+net3 <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB3[i] <<- net3
+
+}
+}
+
+bumble3 <- bee3(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb=4.4, tw=3.3, tf=14.7, te=8.9, n=10)
+
+```
+
+```{r}
+plot(netB ~ position, type = "l", ylim=c(0.20,0.75), ylab = "Net Energy Intake Rate", xlab = "Last Flower Position Visited", col = "purple", main = "Bumblebee Energy Intake Rate Relating to Flower Position")
+lines(netB2 ~ position, col="blue")
+lines(netB3 ~ position, col="darkgreen")
+legend(x=2.5,y=0.36,legend=c("Dense Flowers", "Original", "Less Nectar"),col =c("blue","purple", "darkgreen"),lty=c(1, 1, 1))
+```
