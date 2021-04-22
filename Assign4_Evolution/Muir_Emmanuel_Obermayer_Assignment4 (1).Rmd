@@ -1,0 +1,228 @@
+---
+title: "Muir_Emmanuel_Obermayer_Assignment4"
+author: "Eva, Sarita and Alyssa"
+date: "09/10/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+```{r, include=FALSE}
+library(Ryacas)
+library(deSolve)
+library(rlang)
+```
+
+## Question 1
+
+*We decided to use MS Teams as the platform for our group work. We spent a few days reviewing, and then reached out in the MS team chat, to gauge how close to completion each of us were. Based on this, we decided on a meeting time for review. We used MS Team video calling for the discussion and for review of the R markdown sheets. We each took a turn in sharing the code, and explaining what we did for the question that was assigned, using the share screen option on Ms Teams.*   
+
+*We discussed the use of 'for loops' and some of the difficulty that we experienced trying to use it. We also searched github and other resources for similar topics that can help supplement the understanding of the applied code,related to the topic.* 
+
+## Question 2
+
+The plot below shows that A1A1 individuals start off at a higher frequency (they are the best adapted), however A2A2 indidivuals become more common after about 15 years as A2A2 individuals are instead favoured by natural selection. As the alleles are codominant, the heterozygote A1A2 is assigned middle values as both alleles will be expressed in the heterozygotes resulting in intermediate traits - the frequency of heterozygotes in the population is therefore between the frequencies of A1A1 and A2A2. This is because the heterozygote is a blend of the two alleles - it is not as well adapted as the favoured homozygote, but it is better adapted than the disadvantaged homozygote. 
+
+```{r}
+#Relationship between time and survival 
+
+t<-seq(0,50,by=.01)
+l11 = expression(-1/2000*(t-25)^2+0.6)
+l12 = expression(-1/1800*(t-30)^2+0.7)
+l22 = expression(-1/1600*(t-35)^2+0.8)
+plot(eval(l11)~t,type="l", lwd=3, ylim=c(0,1), ylab="Proportion", xlab="Time")
+lines(eval(l12)~t, col="green", lwd=3)
+lines(eval(l22)~t, col="red", lwd=3)
+legend(x=0,y=1,legend=c("A1A1", "A1A2", "A2A2"), text.col=c("black","green", "red"),lty=1,col=c("black", "green", "red"))
+
+```
+
+The proportion of A1 in the population (p) initially increases, but then starts to drop after about 20 years and declines to 0 after 50 years. This is because the A1A1 individuals are poorly adapted to the rising temperatures. The initial increase and lag before the decrease is because of the heterozygotes - these individuals carry one copy of the A1 allele, and are better adapted than the A1A1 homozygotes.
+
+The population size (n) is very low, but it then starts rapidly increasing after about 40 years. This is because the A2 allele (the better adapted allele) has spread throughout the population by this point, and these well adapted individuals are able to successfully survive and reproduce.
+
+The average fitness (w) drops suddenly in the beginning, but then starts rising. This is because the A1A1 individuals (the less well-adapted individuals) die out as they cannot survive the warming temperatures. Then, as the A2 allele becomes more widespread in the population, the average fitness starts to increase as more A2A2 and A1A2 indidivudals are born.
+
+```{r}
+#Initial conditions
+
+m <- 2 #This is the fecundity, results in fitness of 1 for A1A1)
+p <- 1500/2000 #Proportion of A1 in population
+n <- 2000 #Population size 
+w = 1 #Fitness
+
+#Loop
+for (t in 1:50){
+  w11 = m*eval(l11)
+  w12 = m*eval(l12)
+  w22 = m*eval(l22)
+  wbar = p[t]^2*w11+2*p[t]*(1-p[t])*w12+(1-p[t])^2*w22
+  pprime = (p[t]*w11 + (1-p[t])*w12)*p[t]/wbar
+  nprime = wbar*n[t]
+  p <- c(p, pprime)
+  n <- c(n, nprime)
+  w <- c(w, wbar)
+}
+
+#How does p change?
+t<-c(0:50)
+plot(p~t,type="l",lwd=3,las=2, ylab="Proportion of A1 (p)", xlab="Time (t)")
+#How does N change?
+plot(n~t,type="l",lwd=3,las=2, ylab="Population Size (n)", xlab="Time (t)", cex.axis=0.5) 
+#How does average fitness change?
+plot(w~t,type="l",lwd=3,las=2, ylab="Fitness (w)", xlab="Time (t)")
+
+```
+
+
+## Question 3
+
+```{r}
+#create a vector of the p (A1) values 
+p<- seq(0,1,0.01)
+#create a vector of the s (strength of selection) values that will range from 0.1-1.0 in increments of 0.075.
+s<- seq(0.1,1,0.075)
+
+#The heterozygote  advantage will occur  under conditions where the relative fitness of the heterozygote is higher than either homozygote. Therefore regardless of the range in the strength of selection values (s), the measures of fitness (w) for the homozygotes has to be less than the heterozygotes.   
+#w11 = 1-s
+#w12 = 1
+#w22 = 1-s
+
+#the initial Hardy-Weinberg law shows the gene pool fractions. 
+# 1= p^2 + 2p(1-p) + (1-p)^2
+
+#Therefore in order to find the average fitness (w-bar) in relation to the actual allele (A1), we use the proportions we have created above  in (s), in the w-bar equation, which is derived from the original Hardy -Weinberg law. 
+
+#To make the iterations, a for loop was constructed, with wBAR undefined now, to later hold the values derived. 
+
+wBAR <- NULL
+for (i in 1: length(s)){
+    wBAR[[i]] <- (1-s[i])*p^2 +2*p*(1-p)*1 + ((1-s[i])*(1-p)^2)   #calculate average fitness
+  }
+
+(length(s))
+
+```
+
+Using a plot, we can visualise the values and determine the stable equilibrium. The plot shows how the dependent variable (wBAR-fitness) on y is influenced by the predictor variable p (genes) on the x axis. 
+
+Derive the remainder of values from the average fitness. "lines" adds these the plot with them. This loop calculates the average fitness for the remaining values. 
+
+```{r}
+plot(wBAR[[1]]~p, type="l", lwd=2, ylim=c(0,1),xlab="Fraction of A1 in gene pool",ylab="Average relative selective value")
+cl<- topo.colors(12)  
+for(i in 2:13) {              
+    lines(wBAR[[i]]~p, lty = 1, lwd=2, col= cl [i-1])   
+    }
+abline ( v= p[50], lty=5, col="red")
+
+legend (0.0,0.2, c("0.075", "0.15", "0.225","0.3", "0.375","0.45", "0.525", "0.6", "0.675", "0.75", "0.825", "0.9","0.975", "1"), lty=1, col= c( "black", cl), cex=0.5, title ="s", ncol=4)
+
+```
+
+Heterozygote advantage occurs when the heterozygous genotype has a higher relative fitness than either the homozygous dominant or homozygous genotype.An adaptive landscape shows the relationship between fitness (vertical axis) and one or several traits or genes (horizontal axis). An adaptive landscape therefore can be looked at as a  form of response,  describing how a dependent variable (fitness) (y axis) is influenced by the predictor variable, the traits or genes (x axis).
+
+This model ran a range of 13 values using increments of the proportion 0.075, in order to obtain the the average population fitness values (wbar) to find the maximum. Therefore, if the relative fitness does not depend on p (A1), the gene pool changes represents the population climbing upwards on the w-bar curve, obtaining the gene combination with the highest fitness at the peak.Hence the w-bar curve is termed the 'adaptive' topography, and natural selection is seen as the reason for this upward movement to the nearest peak on the curve. In this graph stability occurs at 0.5, showing heterozygote advantage. As the strength of fitness changes (s), natural selection improves a species' adaptation to its environment. The average relative fitness changes over time, until the equilibrium is reached.
+
+## Question 4
+
+Question 4 looks at genetic drift and the maintenance of genetic diversity. The goal was to find the minimum viable starting population size that provides a 99% chance of preserving both alleles over the course of 100 generations, assuming constant population size. To complete this I took the function for genetic drift with selection that generated p values, the proportion of A1 alleles, and when replicating it 18 times, I also added a loop to do those replications for a sequence of starting populations. With the values generated I plotted a total of 12 starting population scenarios ranging from 4 individuals to 15 individuals and displayed them below.
+
+``` {r}
+drift_ns <- function(w11,w12,w22,p0,n,time){    #Function to find p values over time
+  p <- p0    #Initial condition is placed in the first position of the p column vector
+  for (t in 1:time){    #For every instance in the set of generations
+    a1 <- rbinom(2*n,size=1,prob=p[t])    #Draw of alleles
+    pd <- sum(a1)/(2*n)    #The ratio of A1 alleles in the total population
+    wbar = pd^2*w11+2*pd*(1-pd)*w12+(1-pd)^2*w22    #Selection, Avg fitness
+    pprime = (pd*w11 + (1-pd)*w12)*pd/wbar    #Selection, p(t+1)
+    p <- c(p, pprime)    #Column binding pprime values under the original p value
+  }
+  return(p) 
+}
+
+set.seed(1)
+n0s <- seq(4,15,1)
+e <- NULL
+for (n in n0s){    #For every n in the sequence of starting population sizes
+  for (i in 1:18){    #Run 18 replicates of the function over 100 generations
+    e <- cbind(e,drift_ns(w11=0.5,w12=1,w22=0.5,p0=0.5,n,time=100))    #Column bind the results of the 18 sequences to 'e'
+  }
+}
+
+par(mfrow=c(2,2)) #Combine following 4 graphs into one output
+
+colors<-rainbow(216)
+plot(e[,1],col=colors[1],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 4")
+for (i in 2:18){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,19],col=colors[19],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 5")
+for (i in 20:36){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,37],col=colors[37],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 6")
+for (i in 38:54){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,55],col=colors[55],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 7")
+for (i in 56:72){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+par(mfrow=c(2,2))
+
+plot(e[,73],col=colors[73],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 8")
+for (i in 74:90){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,91],col=colors[91],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 9")
+for (i in 92:108){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,109],col=colors[109],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 10")
+for (i in 110:126){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,127],col=colors[127],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 11")
+for (i in 128:144){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+par(mfrow=c(2,2))
+
+plot(e[,145],col=colors[145],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 12")
+for (i in 146:162){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,163],col=colors[163],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 13")
+for (i in 164:180){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,181],col=colors[181],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population of 14")
+for (i in 182:198){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+
+plot(e[,199],col=colors[199],lwd=1.5,type="l",ylim=c(0,1),xlab="Generation",ylab="Proportion A1",main="Starting Population 15")
+for (i in 200:216){
+  lines(e[,i],col=colors[i],lwd=1.5)
+}
+```
+
+As seen above, around a starting population size of 12 individuals, the preservation of both alleles over the course of 100 generations is shown, when assuming constant population size, although, in a realistic population, it is very unlikely that the population size would be constant, especially over 100 generations. Demographic stochasticity, as studied in the previous assignment, showed that all populations will go extinct eventually and given a smaller population, that risk of extinction is greatly accentuated, though migration may offset this risk. Small populations also show a risk in genetic drift, where, without selection or mutations the allele frequency will begin to fixate, lowering genetic diversity. In a realistic environment the environment is constantly changing. This can play a role in the genetic diversity which is necessary for individuals to adapt to their environment. This diversity could also play a role in selection if it were to greatly improve the fitness of an individual, which may in turn affect which individuals are fit to survive and mate.
+
+In smaller population sizes, the interaction of genetic drift and demographic stochasticity can have a much larger impact on population changes, when compared to a larger population. This is helpful to take into account when developing conservation management tactics for certain populations that are headed to extinction at a faster rate. Especially when populations become small enough and these stochastic methods play a larger role, there is a strong probability of inbreeding depression occurring due to the dwindling of down genetic diversity when mating occurs. Overall, it is important to monitor the environmental variation, migration, and genetic diversity of populations to better generate models of population level so if they may seem in danger a more proactive approach can be determined to counteract the possibility of extinction.

@@ -1,0 +1,159 @@
+---
+title: "Obermayer_Sheth_Assignment6"
+author: "Alyssa Obermayer"
+date: "11/7/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+```{r packages, message=FALSE, warning=FALSE}
+#Load required packages
+library(Ryacas)
+library(deSolve)
+```
+
+## **Question 3**
+
+We chose to model the Ebola Virus because of its high mortality rate and high prevalence in West Africa, causing it to evolve into a major problem for public health. There is typically a rapid decline in health one week after the onset of symptoms which can lead to death after an average of 10 days in 50%-90% of infections.
+
+An important factor of why the Ebola Virus is important to model is the constant reemergence of the virus in various areas around West and Central Africa, large in part due to the animal and environmental reservoirs which the virus can reside in and be transmitted, through bodily fluids or nonhuman animals. Several bat species are possible reservoirs for the Ebola Virus with transmission to humans via feces, saliva, or food. This, in concurrence with the natural movement of bat colonies from Central to West Africa could account for multiple reemergence events of Ebola Virus in various populations over a relatively recent time-line (Alexander et al, 2015).
+
+The use of compartmental host-pathogen modeling can play an important role in simulating these Ebola Virus reemergence events, as well as allow us to understand different aspects of the spread of the virus within a population over time. Furthermore, the paper from Rachah and Torres (2015) presents an additional perspective in adding the effect of vaccination on the infected population and helps model the possible effect that may have on an outbreak over time. Overall, these models and the parameters used within them can help the researchers and public health officials determine if an infectious disease has the possibility of becoming an epidemic or spreading further and the possible actions that are necessary to take to contain the pathogen.
+
+The following figure shows the SIR compartmental model based on numerical data obtained from the World Health Organization (WHO) of the 2014 Ebola Virus outbreak in Liberia. This model takes the starting data from the outbreak with a total population of 472 individuals, with 12 infected individuals, and 0 recovered individuals, along with a 0.000318 rate of infection (b) and a 0.0175 recovery rate (g). It then models the virus over a 90 day period showing that the number of infected individuals increases as the number of susceptible individuals decreases, likely because they are becoming infected. Additionally, as this occurs the number of recovered individuals increases at a slower rate but eventually surpasses the number of infected individuals, showing that the majority of the population has likely developed immunity to the virus. I will note that the research paper this figure was based on also plotted actual infection data obtained from the WHO but they did not put the exact numbers that were plotted in the material. I tried to obtain this data from the WHO pages that were referenced but was unable to find the concrete numbers I needed.
+
+```{r}
+#SIR compartmental model function
+SIR <- function (t, n, parms){
+  with(as.list(parms), {
+    S <- -b*n[1]*n[2]
+    I <- b*n[1]*n[2] - g*n[2]
+    R <- g*n[2]
+    list(c(S, I, R))
+  })
+}
+
+N <- 472      #Initial Population
+b <- 0.000318 #Rate of infection
+g <- 0.0175   #Recovery Rate
+s0 <- 460     #Initial susceptible
+i0 <- 12      #Initial Infected
+r0 <- 0       #Initial recovered
+initialN <- c(s0,i0,r0) #Initial population vector
+
+#SIR ode function showing number of cases over 90 days
+SIR.out <- ode(y = initialN, times = seq(0,90,by=1), func = SIR,
+               parms=c(N=N,b=b,g=g),method="ode45")
+#Plotting SIR Model
+SIRplot <- plot(SIR.out[,2]~SIR.out[,1], #Plotting susceptible
+                type="l", lwd=2, col="tomato3",
+                xlab="t (days)",ylab="Number of Cases", 
+                xaxs="i", yaxs="i",
+                xlim=c(0,90), ylim=c(0,500),
+                main="Base Numerical SIR Model for Ebola")
+lines(SIR.out[,3]~SIR.out[,1], lwd=2, col="turquoise4") #Plotting infected
+lines(SIR.out[,4]~SIR.out[,1], lwd=2, col="violetred4") #Plotting recovered
+```
+
+The figure below shows a dimensionless SIR compartmental model of a virus starting with 95% of the population being susceptible, 5% of the population being infected, and 0% being recovered, along with a 0.2 rate of infection (b) and 0.1 recovery rate (g). This shows a similar pattern to the numerical data model though the number of cases at a given time are given in percentages of a population. 
+
+```{r}
+#SIR dimensionless compartmental model function
+SIRd <- function (t, n, parms){
+  with(as.list(parms), {
+    S <- -b*n[1]*n[2]
+    I <- b*n[1]*n[2] - g*n[2]
+    R <- g*n[2]
+    list(c(S, I, R))
+  })
+}
+
+N <- 1
+b <- 0.2
+g <- 0.1
+s0 <- 0.95
+i0 <- 0.05
+r0 <- 0
+#Initial parameters changed because model is now based off of percentages of the population
+initialN <- c(s0, i0, r0)
+
+SIR.outd <- ode(y = initialN, times = seq(0,90,1), func = SIRd, 
+                parms = c(N=N, b=b, g=g), method='ode45')
+SIRdplot <- plot(SIR.outd[,2]~SIR.outd[,1], 
+                 type='l', lwd=2, col='tomato3', 
+                 xlab='t (days)', ylab='Number of Cases', 
+                 xaxs="i", yaxs="i",
+                 xlim=c(0,90), ylim=c(0,1),
+                 main="Dimensionless SIR Model for Ebola")
+lines(SIR.outd[,3]~SIR.outd[,1], lwd=2, col='turquoise4')
+lines(SIR.outd[,4]~SIR.outd[,1], lwd=2, col='violetred4')
+```
+
+Lastly, the figure below represents a dimensionless SIR compartmental model of a virus with the introduction of varying vaccination rates ranging from 0 to 0.06. The addition of this parameter to the model decreases the number of days to peak infected individuals because as the rate of vaccination increases, those susceptible individuals that were vaccinated are able to transition straight to the recovered individuals group. 
+
+In the model shown, susceptible individuals are represented with reddish hues, infected individuals are represented with blue hues, and recovered individuals are represented with yellow/brown hues, additionally, the vaccination rate increases as these hues become darker in their respective categories. It can be seen that individuals who were susceptible to the Ebola Virus reduce gradually with increased vaccination and the beginning of the plateau of cases occurs in a shorter number of days. The cases for infected individuals is highest around 27 days but as vaccination rate increases the day to peak infections decrease. Moreover, the number of recovered individuals after 90 days increases from around 80% with no vaccine to 88% with a 6% vaccination rate of the population.
+
+```{r}
+#SIR dimensionless compartmental model function with vaccine introduced
+SIRv <- function (t, n, parms){
+  with(as.list(parms), {
+    S <- -b*n[1]*n[2] - v*n[2] #subtracting vaccinated individuals
+    I <- b*n[1]*n[2] - g*n[2]
+    R <- g*n[2] + v*n[2] #adding vaccinated individuals
+    list(c(S, I, R))
+  })
+}
+
+N <- 1
+b <- 0.2
+g <- 0.1
+v <- c(0,0.005,0.01,0.02,0.03,0.04,0.06) #rate of vaccination, beginning at 0
+s0 <- 0.95
+i0 <- 0.05
+r0 <- 0
+initialN <- c(s0, i0, r0)
+
+SIR.outv0 <- ode(y = initialN, times = seq(0,90,1), func = SIRv,parms = c(N=N, b=b, g=g, v=0), method='ode45')
+SIR.outv0.005 <- ode(y = initialN, times = seq(0,90,1), func = SIRv,parms = c(N=N, b=b, g=g, v=0.005), method='ode45')
+SIR.outv0.01 <- ode(y = initialN, times = seq(0,90,1), func = SIRv,parms = c(N=N, b=b, g=g, v=0.01), method='ode45')
+SIR.outv0.02 <- ode(y = initialN, times = seq(0,90,1), func = SIRv,parms = c(N=N, b=b, g=g, v=0.02), method='ode45')
+SIR.outv0.03 <- ode(y = initialN, times = seq(0,90,1), func = SIRv,parms = c(N=N, b=b, g=g, v=0.03), method='ode45')
+SIR.outv0.04 <- ode(y = initialN, times = seq(0,90,1), func = SIRv,parms = c(N=N, b=b, g=g, v=0.04), method='ode45')
+SIR.outv0.06 <- ode(y = initialN, times = seq(0,90,1), func = SIRv,parms = c(N=N, b=b, g=g, v=0.06), method='ode45')
+
+
+plot(NA,type='l', lwd=2, xlab='t (days)', ylab='Number of Cases',
+     xaxs = "i", yaxs = "i",
+     xlim=c(0,90), ylim=c(0,1),
+     main="Dimensionless SIR Model with Vaccine")
+lines(SIR.outv0[,2]~SIR.outv0[,1], lwd=2, col='lightpink3')
+lines(SIR.outv0[,3]~SIR.outv0[,1], lwd=2, col='skyblue2')
+lines(SIR.outv0[,4]~SIR.outv0[,1], lwd=2, col='lightgoldenrod')
+lines(SIR.outv0.005[,2]~SIR.outv0.005[,1], lwd=2, col='hotpink')
+lines(SIR.outv0.005[,3]~SIR.outv0.005[,1], lwd=2, col='steelblue1')
+lines(SIR.outv0.005[,4]~SIR.outv0.005[,1], lwd=2, col='gold')
+lines(SIR.outv0.01[,2]~SIR.outv0.01[,1], lwd=2, col='hotpink4')
+lines(SIR.outv0.01[,3]~SIR.outv0.01[,1], lwd=2, col='turquoise2')
+lines(SIR.outv0.01[,4]~SIR.outv0.01[,1], lwd=2, col='goldenrod3')
+lines(SIR.outv0.02[,2]~SIR.outv0.02[,1], lwd=2, col='firebrick')
+lines(SIR.outv0.02[,3]~SIR.outv0.02[,1], lwd=2, col='turquoise4')
+lines(SIR.outv0.02[,4]~SIR.outv0.02[,1], lwd=2, col='darkorange1')
+lines(SIR.outv0.03[,2]~SIR.outv0.02[,1], lwd=2, col='firebrick4')
+lines(SIR.outv0.03[,3]~SIR.outv0.03[,1], lwd=2, col='royalblue3')
+lines(SIR.outv0.03[,4]~SIR.outv0.03[,1], lwd=2, col='chocolate')
+lines(SIR.outv0.04[,2]~SIR.outv0.04[,1], lwd=2, col='maroon')
+lines(SIR.outv0.04[,3]~SIR.outv0.04[,1], lwd=2, col='mediumblue')
+lines(SIR.outv0.04[,4]~SIR.outv0.04[,1], lwd=2, col='orange4')
+lines(SIR.outv0.06[,2]~SIR.outv0.02[,1], lwd=2, col='darkorchid4')
+lines(SIR.outv0.06[,3]~SIR.outv0.06[,1], lwd=2, col='navyblue')
+lines(SIR.outv0.06[,4]~SIR.outv0.06[,1], lwd=2, col='saddlebrown')
+```
+
+References:
+
+Alexander, Kathleen A et al. “What factors might have led to the emergence of Ebola in West Africa?.” PLoS neglected        tropical diseases vol. 9,6 e0003652. 4 Jun. 2015, doi:10.1371/journal.pntd.0003652
+
+Amira Rachah, Delfim F. M. Torres, "Mathematical Modelling, Simulation, and Optimal Control of the 2014 Ebola Outbreak      in West Africa", Discrete Dynamics in Nature and Society, vol. 2015, Article ID 842792, 9 pages, 2015.                  https://doi.org/10.1155/2015/84279

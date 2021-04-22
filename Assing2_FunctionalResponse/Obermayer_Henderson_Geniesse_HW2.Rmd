@@ -1,0 +1,167 @@
+---
+title: "Functional Response 5"
+author: "Grace Henderson, Alyssa Obermayer, Christyn Geniesse"
+date: "9/14/2020"
+output: html_document
+---
+
+## *Workplan*
+
+To complete this assignment our group used email, Google docs, and MS Teams. The questions were divided via email, worked out individually on R, and answers were uploaded to the shared Google doc. There was asynchronous editing on the Google doc as well as some text back and forth. Code revision was done both individually and on Teams where all members participated to discuss our thoughts on the code and text answers. One member put together the document in R markdown and sent it to the rest of the group to do a final check prior to submission.
+
+## *Problem 1*
+
+For problem 1 we will recreate the "Sit-and-Wait Forager" figure 2.7, from our 
+textbook, in R using the same parameters as in the book. This model looks at 
+sit-and-wait foraging of a semi-circle in front of a predator in two different 
+habitats, wet and dry, and compares the average energy gain per prey item versus 
+cutoff distance in each habitat. 
+
+First, we input the parameters for the model
+```{r}
+# Initial conditions and parameters from the book
+
+e = 10                             #Energy per prey item
+ew = 0.1                           #Energy spent waiting
+ep = 1                             #Energy spent pursuing
+v = 0.5                            #Running speed of predator
+rc = seq(0.005, 4.000, by = 0.005) #Cutoff distances
+aw = 0.02                          #Prey arrival rate wet habitat
+ad = 0.005                         #Prey arrival rate dry habitat
+```
+
+Next, we will generate equations to analyze the average energy gain per prey item 
+in both the wet and dry habitats.
+```{r}
+#Wet habitat analysis
+#Equation for time spent waiting in the wet habitat
+tww <- 2/(aw * pi * (rc^2))
+
+#Equation for average pursuit time
+tp <- (4/3) * (rc/v)
+
+#Equation for total average time in wet habitat
+tiw <- (tww + tp)
+
+#Equation for average energy per item in wet habitat
+eiw <- (e) - (2 * ((ew)/(aw * pi * (rc^2)))) - ((4/3) * ((ep * rc)/(v)))
+
+#Equation for average energy gain per item in wet habitat
+etw <- (eiw)/(tiw)
+
+#Dry habitat analysis
+#Equation for time spent waiting in the dry habitat
+twd <- 2/(ad * pi * (rc^2))
+
+#Equation for total average time in wet habitat
+tid <- (twd + tp)
+
+#Equation for average energy per item in wet habitat
+eid <- (e) - (2 * ((ew)/(ad * pi * (rc^2)))) - ((4/3) * ((ep * rc)/(v)))
+
+#Equation for average energy gain per item in wet habitat
+etd <- (eid)/(tid)
+```
+
+Finally, with the quantitative information determined above we can generate the plot.
+```{r}
+#Sit and wait foraging plot
+plot(etw~rc,
+     type = "l",
+     xlab = "Cutoff Distance (m)",
+     ylab = "Energy/Time (j/s)",
+     main = "Sit-and-Wait Forager",
+     col = "cadetblue")
+lines(etd~rc,
+      col = "burlywood4")
+```
+
+## *Problem 2*
+
+Use R to rewrite and run the bumblebee function in section 2.4, p 53-54. Produce Figure 2.10.
+
+```{r}
+#Create a function which contains a loop, to generate the energy gained at each of 10 flower positions
+
+bee <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB <<- 0;                         #Empty object for the loop output
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+20.19)              #Expected caloric reward for ith flower position
+
+net <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))            #The bee foraging model from the book
+netB[i] <<- net                       #Store the loop output
+
+}
+}
+
+bumble <- bee(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb= 4.4, tw=3.3, tf=14.7, te=8.9, n=10)                         #Run the function with the parameters as defined in the book
+
+```
+
+
+```{r}
+#Recreate the figure on page 53
+position <- seq(from=1, to=10, length.out=10)
+
+plot(netB ~ position, type = "l", ylab = "Net Energy Intake Rate", xlab = "Last Flower Position Visited", col = "purple", main = "Bumblebee Energy Intake Rate Relating to Flower Position")
+```
+
+According to this model, at these parameters, it is optimal for the bee to move to a new plant after the 4th plower position.
+
+Now imagine bees in two other areas. In one area the plants grow more densely than in the situation you have already modeled. Change 1 parameter that would represent this situation and explain why you chose that parameter. How does that change the number of flowers visited on a plant? Does it take a large change in the parameter chosen to change the number of flowers visited?
+
+```{r}
+#Rerun the function to re-save the new parameters in a new output
+
+bee2 <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB2 <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+20.19)
+net2 <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB2[i] <<- net2
+
+}
+}
+
+bumble2 <- bee2(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb=0.5, tw=3.3, tf=14.7, te=8.9, n=10)                         #Flying time between flowers changed to 0.5
+
+```
+
+Imagine a second set of meadows where flowers have less nectar due to drier conditions. Choose 1 parameter to change to represent this situation. How does that change the number of flowers visited on a plant? Does it take a large change in that parameter to change the number of flowers visited? Use equations and/or plots to support your answers.
+
+```{r}
+#Rerun the function to re-save the new parameters in a new output
+
+bee3 <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB3 <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+15)                 #Energy gained per flower reduced to 15 calories
+net3 <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB3[i] <<- net3
+
+}
+}
+
+bumble3 <- bee3(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb=4.4, tw=3.3, tf=14.7, te=8.9, n=10)
+
+```
+
+```{r}
+#Plot the models with the 3 different parameters
+
+plot(netB ~ position, type = "l", ylim=c(0.20,0.75), ylab = "Net Energy Intake Rate", xlab = "Last Flower Position Visited", col = "purple", main = "Bumblebee Energy Intake Rate Relating to Flower Position")
+lines(netB2 ~ position, col="blue")
+lines(netB3 ~ position, col="darkgreen")
+legend(x=2.5,y=0.36,legend=c("Dense Plants", "Original", "Less Nectar"),col =c("blue","purple", "darkgreen"),lty=c(1, 1, 1))
+```
+
+When the plants are denser, we assumed the flying time between plants would be shorter. In that scenario, it is optimal for the bee to switch plants after the 3rd flower position. In the scenario with drought and less nectar in each flower, we assumed each flower would yield fewer calories. In that scenario, it is still optimal for the bee to visit the 4th flower before moving on. The bee simply receives less net energy overall with less nectar.

@@ -1,0 +1,326 @@
+---
+title: "Final Project: The Invasive Growth of the Spotted Lanternfly"
+author: "Alyssa Obermayer"
+date: "12/6/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+# **Introduction**
+
+Invasive species can have the potential to cause detrimental impacts on natural ecosystems, the economy, and quality-of-life. These aspects lead to the importance of modeling the potential for spread and growth of these species so we may prepare and combat the possible harm that may ensue. The Spotted Lanternfly (SLF) (*Lycorma delicatula*) is a native univoltine, planthopper to Southwest China and Southeast Asia, though while it jumps more than it flies, it has already spread to South Korea in 2006 and then to Burks County, Pennsylvania in September 2014, possibly by way of a specialty stone shipment from Southeast Asia (Para et al., 2020). Since its introduction it has cause havoc on the grape, plant, and timber industries in Pennsylvania with which a need for human intervention is erupting to prevent further spread, growth, and economical impact (Tewodros et al., 2019). While the SLF primarily lays its eggs on trees, they have also been seen on various other materials, primarily any clear, flat surface. From this, they currently have quarantine orders in place for shipments that leave the affected areas as well as public outreach programs to check your personal vehicle for eggs if you are preparing to take a trip outside the area. Along with these programs and policies, the Pennsylvania Department of Agriculture has been working closely with universities to study the SLF and develop various human intervention methods to try and eradicate this species (Para et al., 2020).
+
+When targeting an invasive species to attempt curbing its growth and jump-starting its decline, it is important to know about the species life stages to determine where they may be the most vulnerable and at which time in their life. The SLF lives only for a year, in which it hatches between April and June and then develops overtime reaching 4 different instar points before being classified as an adult around July to December (Lee et al., 2019). Once they reach their adult stage they feed for at least two months on various trees of interest, with the Tree-of-Heaven (*Ailanthus altissima*) being their preferred (Murman et al., 2020). Once they are through feeding they begin their egg laying process between September and December, where while the adults begin to die off, their eggs begin to overwinter and develop for the coming year (Lee et al., 2019).
+
+To begin modeling certain intervention tactics I gathered survivability data on particular trees of interest and impacted particular life stages incrementally to produce a geometric growth factor (R) below 1, showing that the population would be declining. These included intervention methods such as egg scraping, egg parasatoids, insecticides, sticky bands, and trap trees. This was able to show how much the life stage would have to be impacted by human intervention for a particular set of methods to show a positive affect (decrease in growth rate of the SLF). Additionally, I looked into literature relating overwintering temperature to hatch rate of the SLF eggs to  model how the earths warming climate has the possibility of increasing the success of the eggs hatching and in turn possibly leading to a higher growth rate. Lastly, I observed short-term, small scale growth over time of the SLF population on a single tree over twenty years, while accounting for different qualities that each year may have and how that impacts the growth rate and population over time.
+
+# **Starting Leslie Matrices**
+
+To start, I generated Leslie matrices of three different tree species that the SLF frequented, Black Walnut (
+*Juglans nigra*), Tree-of-Heaven (*Ailanthus altissima*), Hops (*Humulus lupulus*), and an average between the three trees. These trees were selected from the Murman et al. (2020) study because they showed varying results of life stage survivability of the SLF when kept in sleeves on their respective trees. Among the various resources I have decided to infer that the average fecundity for the adult SLF is 105, given that much of the literature gives ranges between 30 and 60 eggs per mass with each female laying 2-3 masses (Para et al., 2020). Along with each matrices I show their eigenvalue which represents their geometric growth factor (R). It is notable that the conditions in these sleeves are not optimal for the SLF, being confined to a single tree for the duration of their life, but the were controlled enough to see relative survivability on each tree. Additionally, it is noted in the there is a possibility that different tree species could be required at different stages in their life. Moreover, in all of the sleeves studied no adults laid eggs, so I inferred an average fecundity based off of literature (Murman et al., 2020). Even with the constraints of this model each of the geometric growth factors is greater than 1, which shows that the populations would be increasing.
+
+```{r}
+##Black Walnut
+BWmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.64,0,0, 
+                  0,0,0,0,0.55,0,0,0,0,0,0,0.27,105,0,0,0,0,0), nrow = 6, ncol = 6)
+#Assign the eigenvalues to a vector
+BWei <- eigen(BWmat)$values
+#Takes the highest eigenvalue to be the R value
+BWR <- max(Re(BWei[abs(Im(BWei)) < 1e-06]))
+BWR
+BWmat
+
+##Tree-of-Heaven
+TOHmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.91,0,0, 
+                   0,0,0,0,0.73,0,0,0,0,0,0,0.05,105,0,0,0,0,0), nrow = 6, ncol = 6)
+#Assign the eigenvalues to a vector
+TOHei <- eigen(TOHmat)$values
+#Takes the highest eigenvalue to be the R value
+TOHR <- max(Re(TOHei[abs(Im(TOHei)) < 1e-06]))
+TOHR
+TOHmat
+
+##Hops
+HPmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.83,0,0, 
+                  0,0,0,0,0.83,0,0,0,0,0,0,0.83,105,0,0,0,0,0), nrow = 6, ncol = 6)
+#Assign the eigenvalues to a vector
+HPei <- eigen(HPmat)$values
+#Takes the highest eigenvalue to be the R value
+HPR <- max(Re(HPei[abs(Im(HPei)) < 1e-06]))
+HPR
+HPmat
+
+##Average of 3 trees of interest from above
+AVmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.79,0,0, 
+                  0,0,0,0,0.7,0,0,0,0,0,0,0.38,105,0,0,0,0,0), nrow = 6, ncol = 6)
+#Assign the eigenvalues to a vector
+AVei <- eigen(AVmat)$values
+#Takes the highest eigenvalue to be the R value
+AVR <- max(Re(AVei[abs(Im(AVei)) < 1e-06]))
+AVR
+AVmat
+```
+
+# **Adjusting Leslie Matrices for Intervention Methods**
+
+Next I chose to look at how different intervention methods, when done successfully, can positively impact
+the geometric growth factor, so that it drops below zero. To model this I used a while loop to gradually
+lower certain parameters of various life stages based on the different methods being utilized in the field. This can help show us how much we would need to affect these certain stages to see a decrease in population growth of this invasive Spotted Lanternfly. 
+
+## *Stage of Development: Egg*
+
+First, I am going to look at intervention methods that target the egg stage of development for the Spotted Lanternfly. The main method of trying to control the hatch rate of the eggs that are laid is egg scraping. This occurs during the winter months when these eggs are residing on their trees, or other flat surfaces, where individuals manually scrape these eggs off to discard them. As of October 2017, 1,538,740 SLF have died as a result of egg scraping (PDA, 2017). Additionally, a method of biological control that has been proposed is the effect of egg parasatoids to control the hatch rate of these masses (Lee et al., 2019, Para et al., 2018). These combined should be able to help suppress the growth of this population but we will see to which degree the hatch rate has to be lowered to show effectiveness.
+
+```{r}
+## Black Walnut
+while (abs(eigen(BWmat)$values[1]) > 1) {
+BWmat[1, 6] = (BWmat[1, 6] - 1)
+}
+BWeiC <- eigen(BWmat)$values
+BWeiC <- abs(max(Re(BWeiC[abs(Im(BWeiC)) < 1e-06])))
+BWeiC
+BWmat
+
+## Tree-of-Heaven
+while (abs(eigen(TOHmat)$values[1]) > 1) {
+TOHmat[1, 6] = (TOHmat[1, 6] - 1)
+}
+TOHeiC <- eigen(TOHmat)$values
+TOHeiC <- abs(max(Re(TOHeiC[abs(Im(TOHeiC)) < 1e-06])))
+TOHeiC
+TOHmat
+
+## Hops
+while (abs(eigen(HPmat)$values[1]) > 1) {
+HPmat[1, 6] = (HPmat[1, 6] - 1)
+}
+HPeiC <- eigen(HPmat)$values
+HPeiC <- abs(max(Re(HPeiC[abs(Im(HPeiC)) < 1e-06])))
+HPeiC
+HPmat
+
+## Average
+while (abs(eigen(AVmat)$values[1]) > 1) {
+AVmat[1, 6] = (AVmat[1, 6] - 1)
+}
+AVeiC <- eigen(AVmat)$values
+AVeiC <- abs(max(Re(AVeiC[abs(Im(AVeiC)) < 1e-06])))
+AVeiC
+AVmat
+```
+
+## *Stage of Development: Nymph*
+
+Next, I chose to look at certain intervention methods that target the nymph stages of development (instars
+1-4) on the three trees of interest and the average. One of the methods deployed is tree banding where brown sticky bands are wrapped around trees which the SLF will stick to and should be unable to move from. This is mainly a tactic for SLF nymphs, as adult have shown a lesser ability to stick to these bands due to their size (Murman et al., 2020). As of October 2017, 1,010,751 Spotted Lanternflies have been killed as a result of this method (PDA, 2017). Additionally, various insecticides are regularly applied to the trees that SLF frequent. This is a treatment that requires vigilance to prevent any sort of resistance from building with prolonged usage of a particular insecticide, which can be regulated through rotational uses of different insecticides (Para et al., 2020).
+
+```{r}
+## Black Walnut Original Matrix
+BWmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.64,0,0, 
+                  0,0,0,0,0.55,0,0,0,0,0,0,0.27,105,0,0,0,0,0), nrow = 6, ncol = 6)
+while (abs(eigen(BWmat)$values[1]) > 1) {
+BWmat[2, 1] = (BWmat[2, 1] - 0.01)
+BWmat[3, 2] = (BWmat[3, 2] - 0.01)
+BWmat[4, 3] = (BWmat[4, 3] - 0.01)
+BWmat[5, 4] = (BWmat[5, 4] - 0.01)
+}
+BWeiN <- eigen(BWmat)$values
+BWeiN <- abs(max(Re(BWeiN[abs(Im(BWeiN)) < 1e-06])))
+BWeiN
+BWmat
+
+## Tree-of-Heaven Original Matrix
+TOHmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.91,0,0, 
+                   0,0,0,0,0.73,0,0,0,0,0,0,0.05,105,0,0,0,0,0), nrow = 6, ncol = 6)
+while (abs(eigen(TOHmat)$values[1]) > 1) {
+TOHmat[2, 1] = (TOHmat[2, 1] - 0.01)
+TOHmat[3, 2] = (TOHmat[3, 2] - 0.01)
+TOHmat[4, 3] = (TOHmat[4, 3] - 0.01)
+TOHmat[5, 4] = (TOHmat[5, 4] - 0.01)
+}
+TOHeiN <- eigen(TOHmat)$values
+TOHeiN <- abs(max(Re(TOHeiN[abs(Im(TOHeiN)) < 1e-06])))
+TOHeiN
+TOHmat
+
+## Hops Original Matrix
+HPmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.83,0,0, 
+                  0,0,0,0,0.83,0,0,0,0,0,0,0.83,105,0,0,0,0,0), nrow = 6, ncol = 6)
+while (abs(eigen(HPmat)$values[1]) > 1) {
+HPmat[2, 1] = (HPmat[2, 1] - 0.01)
+HPmat[3, 2] = (HPmat[3, 2] - 0.01)
+HPmat[4, 3] = (HPmat[4, 3] - 0.01)
+HPmat[5, 4] = (HPmat[5, 4] - 0.01)
+}
+HPeiN <- eigen(HPmat)$values
+HPeiN <- abs(max(Re(HPeiN[abs(Im(HPeiN)) < 1e-06])))
+HPeiN
+HPmat
+
+## Average Original Matrix
+AVmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.79,0,0, 
+                  0,0,0,0,0.7,0,0,0,0,0,0,0.38,105,0,0,0,0,0), nrow = 6, ncol = 6)
+while (abs(eigen(AVmat)$values[1]) > 1) {
+AVmat[2, 1] = (AVmat[2, 1] - 0.01)
+AVmat[3, 2] = (AVmat[3, 2] - 0.01)
+AVmat[4, 3] = (AVmat[4, 3] - 0.01)
+AVmat[5, 4] = (AVmat[5, 4] - 0.01)
+}
+AVeiN <- eigen(AVmat)$values
+AVeiN <- abs(max(Re(AVeiN[abs(Im(AVeiN)) < 1e-06])))
+AVeiN
+AVmat
+```
+
+## *Stage of Development: Adult*
+
+Lastly, I am adjusting adult survivability to see the how successful the affect of intervention methods that target the adult life stage need to be to result in a decline in population. Along with insecticides, a method of creating trap trees is used. Trap trees are generated by removing female Tree-of-Heavens to minimize reproduction of the tree and thinning out the male tree population and using insecticides on those trees that are left. When the SLF gets to their adult stage they are in it for two months feeding to prepare for reproduction, and during these two months they seem to mainly choose to feed on the Tree-of-Heaven. So, they will be attracted to the only Tree-of-Heaven trees that are left, accumulating and feeding on this insecticide ridden tree, to eventually die from it in mass. For this scenario I will only be modeling the Tree-of-Heaven and the average mixed tree to get a more realistic idea of this treatment which is mainly used on the Tree-of-Heaven (Para et al., 2020).
+
+```{r}
+# Tree-of-Heaven Original Matrix
+TOHmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.91,0,0, 
+                   0,0,0,0,0.73,0,0,0,0,0,0,0.05,105,0,0,0,0,0), nrow = 6, ncol = 6)
+while (abs(eigen(TOHmat)$values[1]) > 1) {
+TOHmat[6, 5] = (TOHmat[6, 5] - 0.01)
+}
+TOHeiA <- eigen(TOHmat)$values
+TOHeiA <- abs(max(Re(TOHeiA[abs(Im(TOHeiA)) < 1e-06])))
+TOHeiA
+TOHmat
+
+# Average Original Matrix
+AVmat <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.79,0,0, 
+                  0,0,0,0,0.7,0,0,0,0,0,0,0.38,105,0,0,0,0,0), nrow = 6, ncol = 6)
+while (abs(eigen(AVmat)$values[1]) > 1) {
+AVmat[6, 5] = (AVmat[6, 5] - 0.01)
+}
+AVeiA <- eigen(AVmat)$values
+AVeiA <- abs(max(Re(AVeiA[abs(Im(AVeiA)) < 1e-06])))
+AVeiA
+AVmat
+```
+
+# **Overwintering and Hatch Rates**
+
+Furthermore, I chose to look at how hatch rates of the Spotted Lanternfly relate to the average winter temperatures and possible implications of rising temperature over time due to global warming. It has been seen in literature a relation between hatch rate and these temperatures as studied in Cheonan, Korea (Park, 2015). I used this information in a comparative sense to the temperature data in Reading, Pennsylvania which is about central to Burks County where the outbreak is supposed to have begun. Although their longitudes do not exactly match (Cheonan: N36 degrees 52'/ Reading, Pennsylvania: N40 degrees 34') they are relatively close and both hospitable hosts to the SLF so I found it helpful to model.
+
+This model represents a linear relationship between temperature and hatch rate, where as temperature increases, hatch rate increases as well. This is important to model because as the climate is gradually becoming warmer, this may result in a higher fecundity and success of survival of Spotted Lanternfly eggs. With this increase, it enhances the importance of intervention methods such as egg scraping, insecticides, and possible control with egg parasatoids. In the plot below, the general trend of increase in temperature over the past 6 years can be seen leading to a possible increase in hatch rate. If this projection continues, the increase in hatch rate will require higher vigilance on surfaces that commonly house SLF eggs so we may manually intervene with the possible outcome of this linear relationship. One thing to note is that this is just a scale relative to temperature, for instance as it is seen if the temperature does get high enough the rate can go above 100% but that is not realistic. Optimal temperature just shows that temperature would not be the main issue in egg death, though there is possibly and unmentioned maximum temperature for egg sustainability. When temperature is optimal there is still death by biology, the environment, or human intervention.
+
+```{r}
+#Temps for January 2014-2020 in Reading, Pennsylvania
+Years <- list("2014","2015","2016","2017","2018","2019","2020")
+avgtemps.f <- c(24.5,26.7,29.1,35.2,28.8,29.3,34.6)
+
+#Convert to Celsius
+f2c <- expression((t-32)*(5/9))
+avgtemps.c <- c()
+for (i in avgtemps.f){
+  t <- i
+  ctemps <- eval(f2c)
+  avgtemps.c <<- append(avgtemps.c, ctemps)
+}
+
+#Hatch Rate Expression from Cheonan, Korea data
+dayavg.hr <- expression((10.807*avgtemps.c)+106.24)
+avgtemp.hr <- eval(dayavg.hr)
+
+#plot relationship and recent temp data
+plot(NA, type="l", xlim=c(-10,0), ylim=c(0,100),
+     xlab="Temperature (Celsius)", ylab="Hatch Rate (%)", 
+     main="January Average Temperature vs Hatch Rate")
+abline(106.24,10.807)
+points(avgtemp.hr~avgtemps.c,pch=21,
+       bg=c("#00008B","#0F4FFB","#2ECAF2","#D4FFF3","#198DF8","#5CF7F1","#ADFED4"))
+legend(legend=c("2014","2015","2016","2017","2018","2019","2020"),
+       lty=1,col=c("#00008B","#0F4FFB","#2ECAF2","#D4FFF3","#198DF8","#5CF7F1","#ADFED4"),
+       lwd=2,"bottomright")
+avgttable <- cbind(Years,avgtemps.c,avgtemp.hr)
+avgttable
+```
+
+I then applied this temperature and hatch rate relationship to the model of my hypothetical average tree to gauge how average fecundity of the SLF may increase due to a higher hatch rate success. Originally, I noted fecundity as 105 which was a judicious estimate given the possible range of offspring for each reproducing individual. With the given resources I would gather that in Pennsylvania the eggs laid per female can range between 60 to 150 offspring in their life time (Para et al., 2020), and whereas I originally placed fecundity at 105 I am going to look at how that could increase and the affect that may play on the geometric growth factor (R). A fecundity of 105 is about just at probability of a 70% hatch rate and, based on the data above, the SLF population has a possibility of having a much greater hatch rate with increasing temperature, upwards of 85% and higher. Animals that produce a higher amount of offspring usually are associated with a higher possibility of early death, but with the SLF having very little natural predators and environmental conditions generally improving for their overwintering, they are able to have more of these eggs survive and hatch successfully (Park, 2015).
+
+In adjusting this hypothetical tree matrix I accounted for relatively low average temperatures first resulting in a possible 60% hatch rate and then modeled relatively high temperatures resulting in a relatively high possible hatch rate of 90%, with the fecundities being 90 and 135 respectively. As expected the lower temperatures don't allow for the higher hatch rate and results in a drop in growth rate, while the higher temperatures show an increase in growth rate with a higher hatch rate resulting from temperature increase.
+
+```{r}
+#Relatively low overwintering temperature - 60% hatch rate - ~90 fecundity
+AVmat.lowt <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.79,0,0, 
+                  0,0,0,0,0.7,0,0,0,0,0,0,0.38,90,0,0,0,0,0), nrow = 6, ncol = 6)
+#Assign the eigenvalues to a vector
+AVei.lowt <- eigen(AVmat.lowt)$values
+#Takes the highest eigenvalue to be the R value
+AVR.lowt <- max(Re(AVei.lowt[abs(Im(AVei.lowt)) < 1e-06]))
+AVR.lowt - AVR
+
+#Relatively high overwintering temperature - 90% hatch rate - ~135 fecundity
+AVmat.hit <- matrix(c(0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0.79,0,0, 
+                  0,0,0,0,0.7,0,0,0,0,0,0,0.38,135,0,0,0,0,0), nrow = 6, ncol = 6)
+#Assign the eigenvalues to a vector
+AVei.hit <- eigen(AVmat.hit)$values
+#Takes the highest eigenvalue to be the R value
+AVR.hit <- max(Re(AVei.hit[abs(Im(AVei.hit)) < 1e-06]))
+AVR.hit - AVR
+```
+
+# **Stochastic Environmental Variation and Human Intervention on Growth Rate**
+
+Lastly, it is important to note that there are fluctuations in conditions overtime that can play a role in the success of a species growth. These fluctuations can be caused by anomalous weather events out of our control or caused by some direct or indirect human intervention. In the case of stochastic variation of population growth rate on the Spotted Lanternfly I chose to simulate how good, bad, and neutral years may affect this rate. Hypothetical factors that may cause a bad year for the SLF growth rate could be a cold front that may lower the hatch rate of the overwintering eggs or possible the human intervention on this species is highly successful during this period and they are able to lower survivability of the various life stages. On the other hand, a good year could result from a higher than normal temperature which seems to be the trend over time, along with possible human intervention methods that are just not able to keep up with the SLF's ever growing numbers, which may overall lead to greater hatch rate and survivability over their life stages.
+
+For the function below I chose to assign the probabilities as I did because the current data has shown that the Spotted Lanternfly population is growing even with the numerous attempts at intervention from humans. So, I chose that the likelihood of the SLF having a bad year with a declining population growth rate would be a 10% chance. Next  would be the likelihood of the SLF having a growth rate above 1 but not as optimal as they would prefer, be it human intervention or environmental variation, which I placed at around a 20% chance. Following this, I gave the probability of them having a neutral year, which I would see as how they are progressing currently, at about a 55% chance. Finally, I placed the probability of them having a good year with an above average growth rate at around a 15% chance.
+
+I chose to run this function at only the population level of the SLF that would appear on a single tree (~64) at a given time (Murman et al., 2020) and ran it over 20 years. This allowed me to get a better idea of the possible variation in the beginning and where the short term outlooks are headed for this population. This could then be applied to a cluster of trees in an area or or a more broad outlook at the habitats that the SLF has already colonized in the various counties and states surrounding the initial introduction point.
+
+```{r}
+#Functions for population growth
+#SLF trajectory with less chance for effective human intervention
+pop.growth <- function(rbad, rokay, rneut, rgood, n0){
+  n <- n0 #Set initial population size outside the loop
+  for (i in 1:20){
+    year = runif(1)
+    if (year < 0.1){ #Random switch between good, bad, and neutral conditions
+      R = rbad
+    }else if (year >= 0.1 && year <= 0.3){
+      R = rokay
+    }else if (year > 0.3 && year <= 0.85){
+      R = rneut
+    }else{
+      R = rgood
+    }
+    n <- c(n, R*n[i]) #Calculate the next population size
+  }
+  return(n)
+}
+
+set.seed(1)
+growth.stoch <- pop.growth(rbad = 0.9, rokay = 1.1, 
+                   rneut = 1.4, rgood = 1.7, n0=64)
+plot(growth.stoch,type="l",ylab="Population Size",xlab="Time (Years)",
+     main="Population Growth with Environmental \nand Intervention Stochasticity",
+     ylim=c(0,max(growth.stoch)))
+```
+
+# **Conclusion**
+
+In all, the Spotted Lanternfly is another species atop of many invasive species that need to be watched for an modeled to try and predict and prevent a worsening outcome from their growth and spread around parts of the country. When modeling impact on different life stages I gathered this data from a study that observed survivability on particular trees when sleeved to contain that trees population. After adjusting various survivability values to obtain geometric growth factors (R) less than zero, it is clear that there is never just one way to intervene and try to eradicate a species. There will need to be a concerted effort across all stages to see a decline in population growth. Furthermore, it will be important to factor in the role of our warming climate when projecting population growth overtime, because as it warms the hatch rates could being to increase due to better development conditions. Lastly, it is evident that more action plans and public outreach need to be put into place with seeing possibility for exponential growth within just twenty years of a single tree population. Even with this species not traveling well on its own, it is still able to appear in new regions and if the residents are not aware and do not know what to look out for, and small starting population can easily blossom to a industry threatening pest within just 10 years.
+
+# **References**
+
+Choi, Man-Young, Kim Jeong-hwan, & Byeon, Young-Woong. (2014). Parasitic rate on the eggs of the flower cicada Lycorma delicatula (Hemiptera: Fulgoridae) of Anastatus orientalis (Hymenoptera: Eupelmidae) in China. Journal of the Korean Society of Applied Insects, 53 (2), 135–139. https://doi.org/10.5656/KSAE.2014.01.1.075
+
+Houping Liu, Oviposition Substrate Selection, Egg Mass Characteristics, Host Preference, and Life History of the Spotted Lanternfly (Hemiptera: Fulgoridae) in North America, Environmental Entomology, Volume 48, Issue 6, December 2019, Pages 1452–1468, https://doi.org/10.1093/ee/nvz123
+
+Kelly Murman, Gregory P Setliff, Cathryn V Pugh, Michael J Toolan, Isaiah Canlas, Stefani Cannon, Leslie Abreu, Miranda Fetchen, Longwa Zhang, Melissa L Warden, Matthew Wallace, Jacob Wickham, Sven-Erik Spichiger, Emelie Swackhamer, Daniel Carrillo, Allison Cornell, Nathan T Derstine, Lawrence Barringer, Miriam F Cooperband, Distribution, Survival, and Development of Spotted Lanternfly on Host Plants Found in North America, Environmental Entomology, , nvaa126, https://doi.org/10.1093/ee/nvaa126
+
+Lee, Doo-Hyung & Park, Yong-Lak & Leskey, Tracy. (2019). A review of biology and management of Lycorma delicatula (Hemiptera: Fulgoridae), an emerging global invasive species. Journal of Asia-Pacific Entomology. 22. 589-596. 10.1016/j.aspen.2019.03.004.
+
+National Weather Service Corporate Image Web Team. “Climate Information - National Weather Service Central PA.” National Weather Service, NOAA, 24 Oct. 2005, w2.weather.gov/climate/xmacis.php?wfo=ctp. 
+
+Park, M., 2015. Overwintering Ecology and Population Genetics of *Lycorma delicatula* (Hemiptera: Fulgoridae) in Korea. Ph.D. thesis. Seoul National University.
+
+Parra, G, H  Moylett, and R  Bulluck. 2017. Technical working group summary report—spotted lanternfly, Lycorma delicatula (White, 1845), pp. 42. USDA-APHIS-PPQ-CPHST, Raleigh, NC.
+
+Tewodros T Wakie, Lisa G Neven, Wee L Yee, Zhaozhi Lu, The Establishment Risk of Lycorma delicatula (Hemiptera: Fulgoridae) in the United States and Globally, Journal of Economic Entomology, Volume 113, Issue 1, February 2020, Pages 306–314, https://doi.org/10.1093/jee/toz259
+

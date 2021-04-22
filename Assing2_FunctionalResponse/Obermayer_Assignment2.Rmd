@@ -1,0 +1,168 @@
+---
+title: "Obermayer_Assignment2"
+author: "Alyssa Obermayer"
+date: "9/14/2020"
+output: html_document
+---
+
+## **Assignment 2**
+
+## *Problem 1*
+
+For problem 1 we will recreate the "Sit-and-Wait Forager" figure 2.7, from our 
+textbook, in R using the same parameters as in the book. This model looks at 
+sit-and-wait foraging of a semi-circle in front of a predator in two different 
+habitats, wet and dry, and compares the average energy gain per prey item versus 
+cutoff distance in each habitat. 
+
+First, we input the parameters for the model
+```{r}
+# Initial conditions and parameters from the book
+
+e = 10                             #Energy per prey item
+ew = 0.1                           #Energy spent waiting
+ep = 1                             #Energy spent pursuing
+v = 0.5                            #Running speed of predator
+rc = seq(0.005, 4.000, by = 0.005) #Cutoff distances
+aw = 0.02                          #Prey arrival rate wet habitat
+ad = 0.005                         #Prey arrival rate dry habitat
+```
+
+Next, we will generate equations to analyze the average energy gain per prey item 
+in both the wet and dry habitats.
+```{r}
+#Wet habitat analysis
+#Equation for time spent waiting in the wet habitat
+tww <- 2/(aw * pi * (rc^2))
+
+#Equation for average pursuit time
+tp <- (4/3) * (rc/v)
+
+#Equation for total average time in wet habitat
+tiw <- (tww + tp)
+
+#Equation for average energy per item in wet habitat
+eiw <- (e) - (2 * ((ew)/(aw * pi * (rc^2)))) - ((4/3) * ((ep * rc)/(v)))
+
+#Equation for average energy gain per item in wet habitat
+etw <- (eiw)/(tiw)
+
+#Dry habitat analysis
+#Equation for time spent waiting in the dry habitat
+twd <- 2/(ad * pi * (rc^2))
+
+#Equation for total average time in wet habitat
+tid <- (twd + tp)
+
+#Equation for average energy per item in wet habitat
+eid <- (e) - (2 * ((ew)/(ad * pi * (rc^2)))) - ((4/3) * ((ep * rc)/(v)))
+
+#Equation for average energy gain per item in wet habitat
+etd <- (eid)/(tid)
+```
+
+Finally, with the quantitative information determined above we can generate the plot.
+```{r}
+#Sit and wait foraging plot
+plot(etw~rc,
+     type = "l",
+     xlab = "Cutoff Distance (m)",
+     ylab = "Energy/Time (j/s)",
+     main = "Sit-and-Wait Forager",
+     col = "cadetblue")
+lines(etd~rc,
+      col = "burlywood4")
+```
+
+This plot represents two curves. The blue curve represents the optimal foraging 
+distance when in the wet habitat and the brown curve represents the dry habitat. 
+The curve of the wet habitat peaks higher and at a shorter cutoff distance than 
+the curve of the dry habitat. When generating the plot, we took into account 
+that the wet habitat has a higher prey arrival rate than the dry habitat, so 
+the predator would not have to wait as long for their prey when foraging, nor 
+travel as far to have an optimal outcome. In contrast, the dry habitat has a 
+lower prey arrival rate, so the predator has to wait longer for the prey, and 
+travel farther to obtain prey for an optimal outcome. This shows that foraging 
+in the wet habitat is optimal when compared to the dry habitat, because it 
+results in a higher average energy intake per prey item over time when foraging.
+
+This figure could also inform us of the possible threshold at which the predator 
+might decide to accept or ignore the prey they come into contact with. If the 
+prey item is too far from the predator, it may not be worth the effort to try 
+and obtain it. The threshold determined by this graph would be the best 
+compromise to minimize wait time and minimize pursuit time to maximize the 
+energy gains, which would be considered the optimal cutoff distance and thus 
+part of the optimal foraging strategy for the predator. This can be biologically 
+informative as it would tell us which habitat might be better suited for 
+foraging for the species in question.
+
+## *Problem 2*
+
+Part 1:
+
+```{r}
+bee <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+20.19)
+net <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB[i] <<- net
+
+}
+}
+
+bumble <- bee(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb= 4.4, tw=3.3, tf=14.7, te=8.9, n=10)
+
+```
+
+```{r}
+position <- seq(from=1, to=10, length.out=10)
+
+plot(netB ~ position, type = "l", ylab = "Net Energy Intake Rate", xlab = "Last Flower Position Visited", col = "purple", main = "Bumblebee Energy Intake Rate Relating to Flower Position")
+```
+
+```{r}
+bee2 <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB2 <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+20.19)
+net2 <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB2[i] <<- net2
+
+}
+}
+
+bumble2 <- bee2(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb=0.5, tw=3.3, tf=14.7, te=8.9, n=10)
+
+```
+
+```{r}
+bee3 <- function(P, eb, ew, ef, ee, tb, tw, tf, te, n){
+  netB3 <<- 0;
+  sumi <- 0;
+  
+for (i in 1:n){
+  
+sumi=sumi+(-1.7*i+15)
+net3 <- (P * sumi - eb - P * ew * (i-1) - P * i * ef - ee * (1-P)) / (tb + P * tw * (i-1) + P * i * tf + te * (1-P))
+netB3[i] <<- net3
+
+}
+}
+
+bumble3 <- bee3(P=0.375, eb=0.09, ew=0.07, ef=0.02, ee=0.01, tb=4.4, tw=3.3, tf=14.7, te=8.9, n=10)
+
+```
+
+```{r}
+plot(netB ~ position, type = "l", ylim=c(0.20,0.75), ylab = "Net Energy Intake Rate", xlab = "Last Flower Position Visited", col = "purple", main = "Bumblebee Energy Intake Rate Relating to Flower Position")
+lines(netB2 ~ position, col="blue")
+lines(netB3 ~ position, col="darkgreen")
+legend(x=2.5,y=0.36,legend=c("Dense Flowers", "Original", "Less Nectar"),col =c("blue","purple", "darkgreen"),lty=c(1, 1, 1))
+```

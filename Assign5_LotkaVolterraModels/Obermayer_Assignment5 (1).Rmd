@@ -1,0 +1,331 @@
+---
+title: "Mathamatical Modeling Assignment 5"
+author: "Alyssa Obermayer"
+date: "10/27/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+```{r packages, message=FALSE, warning=FALSE}
+#Load required packages
+library(Ryacas)
+library(deSolve)
+```
+
+## **Question 1**
+
+Question 1 looked at the Intermediate Disturbance Hypothesis between two different species. Our goal was to use the provided text to present a graphical representation relating the amount of disturbance these two species can take, to their abundance levels when within the same environment.
+
+To start, we will go through each expression that is used to present this graph. The n1 and n2 alone expressions represent the affect of the hazard the disturbance causes in relation to the overall disturbance occurring on the respective population sizes while these species are not interacting with each other. The n1 and n2 coexisting expressions represent the affect of the disturbance, as such described above, though showing the impact on each population while both are coexisting in the same space, which is assisted by adding the competition coefficient to the equation. The dn1 and dn2 rare expressions represent the change in population when either species is invading when rare, while disturbance is playing an affect on this invasion.
+
+First, we are solving dn2_rare for the disturbance coefficient to find the minimum amount of disturbance that allows species 2 to increase when rare. Prior to this minimum, species 1 is able to dominate and will crowd out species 2 in the absence of disturbance or with relatively little disturbance. Next, we are solving our dn1_rare expression for the disturbance coefficient to find the maximum amount of disturbance that species 1 can withstand and survive. Since the amount of disturbance that allows species 2 to invade when rare and up until this maximum amount of disturbance that species 1 can withstand, both of the species are coexisting with disturbance and species 2 is able to grow in abundance while species 1 is on its demise. Lastly, we are solving n2_alone for the disturbance coefficient to find the upper bound of disturbance allowable for species 2 to survive while not interacting with species 1, because it has already reached its maximum amount of allowable disturbance and will have most likely died off from the environment. So, while species 1 was dying off from too much disturbance, species 2 was able to grow in abundance until it has also reached its limit of too much disturbance.
+
+The essential idea of the intermediate disturbance hypothesis tells us that an intermediate level of disturbance is a good thing because it promotes species diversty through ensuring that one species cannot crowd out another. The plot generated is able to support this idea by showing that as the amount of disturbance in the environment increases, it was able to generate coexistence for a given period of time while the disturbance levels were manageable for each species, between 0.4 and 0.75. Although the plot does show the moment in time where both species seize to exist, it is able to give a range of disturbance levels that promote species diversity.
+  
+The Intermediate Disturbance Hypothesis is also able to apply when looking at a model between more than two species. The model is able to represent the coexistance of these three or more species by taking into account a balanced hirearchy and by giving all competing species a more even ground by providing advantages and disadvantages for all species. It also shows that depending on the disturbance levels the outer species of this model, ones that can take the least or most disturbance would have some of the greatest potential in that given system.
+
+```{r}
+#Species non-interacting, alone, with disturbance
+#d-overall disturbance; h-exposure to hazard from disturbance
+#Converting into yac symbols
+n1_alone <- expression(k1*(r1-h1*d)/r1)
+n1_alone <- ysym(n1_alone)
+n2_alone <- expression(k2*(r2-h2*d)/r2)
+n2_alone <- ysym(n2_alone)
+
+#Species coexisting with disturbance
+#Converting into yac symbols
+n1_coexist <- expression((k1*(r1-h1*d)/r1-a12*k2*(r2-h2*d)/r2)/(1-a12*a21))
+n1_coexist <- ysym(n1_coexist)
+n2_coexist <- expression((k2*(r2-h2*d)/r2-a21*k1*(r1-h1*d)/r1)/(1-a12*a21))
+n2_coexist <- ysym(n2_coexist)
+
+#Species invading when rare with disturbance
+#Converting into yac symbols
+dn1_rare <- expression(k1*(r1-h1*d)/r1-a12*k2*(r2-h2*d)/r2)
+dn1_rare <- ysym(dn1_rare)
+dn2_rare <- expression(k2*(r2-h2*d)/r2-a21*k1*(r1-h1*d)/r1)
+dn2_rare <- ysym(dn2_rare)
+
+#Solving for the minimum amount of disturbance that allows species 2 to increase when rare
+#Solve in yacas form then convert back to R expression2
+d_min <- yac_expr(y_rmvars(solve(dn2_rare, 'd')))
+d_min
+
+
+#Solving for the maximum amount of disturbance that species 1 can withstand and survive
+#Solve in yacas form then convert back to R expression2
+d_max <- yac_expr(y_rmvars(solve(dn1_rare, 'd')))
+d_max
+
+#Solving for the upper boundary of allowable disturbance
+#Solve in yacas form then convert back to R expression2
+d_ub <- yac_expr(y_rmvars(solve(n2_alone, 'd')))
+d_ub
+
+#Parameters
+r1 <- 0.75  #Intrinsic rate of increase of species 1
+k1 <- 750   #Carrying capacity of species 1
+a12 <- 0    #Per individual strength of species 1
+h1 <- 1     #Exposure to hazard from disturbance for species 1
+r2 <- 1     #Intrinsic rate of increase of species 2
+k2 <- 1000  #Carrying capacity of species 2
+a21 <- 2    #Per individual strength of species 2
+h2 <- 0.75  #Exposure to hazard from disturbance for species 2
+
+#Solving for the d_min, d_max, and d_ub expressions defined above with parameters given
+eval(d_min)
+eval(d_max)
+eval(d_ub)
+
+#Plot values
+plot(NA, type = "l", xlim = c(0,1.4), ylim = c(0,800), xaxs = "i", yaxs = "i", 
+     xlab = "Disturbance", ylab = "Abundance", 
+     main = "Intermediate Disturbance Principle")
+  n1_alone <- expression(k1*(r1-h1*d)/r1)
+    d <- seq(0,eval(d_min),0.04)
+    lines(eval(n1_alone)~d)
+  n1_coexist <- expression((k1*(r1-h1*d)/r1-a12*k2*(r2-h2*d)/r2)/(1-a12*a21))
+  n2_coexist <- expression((k2*(r2-h2*d)/r2-a21*k1*(r1-h1*d)/r1)/(1-a12*a21))
+    d <- seq(eval(d_min),eval(d_max),0.35)
+    lines(eval(n1_coexist)~d)
+    lines(eval(n2_coexist)~d)
+  n2_alone <- expression(k2*(r2-h2*d)/r2)
+    d <- seq(eval(d_max),eval(d_ub),0.55)
+    lines(eval(n2_alone)~d)
+```
+
+## **Question 2**
+
+Question 2 observes the Predator-Prey model while accounting for satiation in the predatation term. Meaning, that predator can only consume so much prey before they reach a limit, and once they reach that limit they will not be able to control the amount of prey in the environment.
+
+## *Part 1 & 2*
+
+To start, we will take a given set of parameters and find values of k, carrrying capacity, of the prey that produce a stable node, stable focus, and unstable focus. As the k-value increases past the minimum k the equillibrium shift and starts to become more oscillatory but also more unstable as k increase. Once the kmin_n value was found, I chose a value slightly larger than that to produce my first stable node plot of the Predator/Prey abundance with density dependance and satiation in regards to 4 different starting populations. To check that this was a stable node equilibrium I ran the eigenvalues of the Jacobian matrix, and with the k-value of 300, I was able to produce real but negative numbers which confirmed that this produced a stable node equilibrium.
+
+```{r}
+#Calling the general starting parameters for the following
+r <- 0.7   #Intrinsic rate of increase of prey
+a <- 0.01  #Coefficient relating prey-capture rate to pred-prey-collision rate
+b <- 0.05  #Coefficient describing the number of prey captures needed to produce a predator
+d <- 0.12  #Death rate of predator
+c <- 10    #Coefficient for leveling off the asymptote
+
+#Predator prey model
+dn1 <- expression(r*n1*(k-n1)/k-c*(1-exp(-a*n1/c))*n2) #Prey
+dn2 <- expression(b*c*(1-exp(-a*n1/c))*n2-d*n2)        #Predator
+
+#Coexistence equilibria
+n1hat3 <- expression(-log((b*c-d)/b/c)/a*c) #Prey
+n2hat3 <- expression(-r*log((b*c-d)/b/c)*c*b*(k*a+log((b*c-d)/b/c)*c)/k/a^2/d) #Predator
+
+#k_min, found by solving n2hat3 for k
+#Solving for prey because we want to know the min amount of prey abundance needed to support the pred
+#When k is just a little be higher that k_min it is a stable node, this can be checked with the jacobian
+kmin <- -log((b*c-d)/b/c)/a*c
+kmin_n <- eval(kmin)
+kmin_n
+
+#Set k to be slightly higher than kmin_n to visualize the stable node
+k <- 300
+
+#Solving for the average equilibria population during coexistance for each species
+n1hat <- eval(n1hat3) #Prey
+n2hat <- eval(n2hat3) #Predator
+
+#Initial populations to be used when finding trajectories and plotting
+initialN1 <- c(n1hat/2,n2hat/2)
+initialN2 <- c(n1hat/4,n2hat/4)
+initialN3 <- c(2*n1hat, 2*n2hat)
+initialN4 <- c(4*n1hat, 4*n2hat)
+
+#Numerical solution
+LVpred_satiate <- function (t, n, parms){
+  with(as.list(parms), {
+    dn1 <- r * n[1]*(k-n[1])/k - c*(1-exp(-a*n[1]/c))*n[2]
+    dn2 <- b*c*(1-exp(-a*n[1]/c))*n[2] - d*n[2]
+    list(c(dn1, dn2))
+  })
+}
+
+#Finding population trajectories for different starting populations
+out.pred1 <- ode(y = initialN1, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred2 <- ode(y = initialN2, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred3 <- ode(y = initialN3, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred4 <- ode(y = initialN4, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+
+#Plotting population trajectories
+plot(NA,xlim=c(0,1500),ylim=c(0,40),xlab="Prey Abundance", ylab="Predator Abundance",
+     main="Predator/Prey with Density Dependence and Satiation",las=1,pch=2,lwd=2)
+lines(out.pred1[,3]~out.pred1[,2],lwd=1.5,col="thistle")
+lines(out.pred2[,3]~out.pred2[,2],lwd=1.5,col="tomato")
+lines(out.pred3[,3]~out.pred3[,2],lwd=1.5,col="turquoise")
+lines(out.pred4[,3]~out.pred4[,2],lwd=1.5,col="violetred")
+points(n2hat~n1hat,pch=3,lwd=2)
+
+#Jacobian and eigenvalue
+n1 <- n1hat
+n2 <- n2hat
+jac <- matrix(c(eval(D(dn1,"n1")),eval(D(dn1,"n2")),eval(D(dn2,"n1")),eval(D(dn2,"n2"))),nrow=2,byrow=TRUE)
+lambda <- eigen(jac)
+lambda$values
+```
+
+Next, I had to find a k-value that satisfied the stable focus equilibrium. So, I looked to choose a k-value that at least doubled the previous one, so I chose a k-value of 800. I then ran the function to get the trajectories for the four starting populations and produced a plot. To verify that this plot was representing a stable focus equilibrium, I looked to the eigenvalues of the Jacobian matrixs and saw that they were imaginary and negative numbers, confirming that this was a stable focus equilibrium.
+
+
+```{r}
+#Increasing k-value to attain a stable focus among the coexisting population
+k <- 800
+
+#Solving for the average equilibria population during coexistance for each species
+n1hat <- eval(n1hat3) #Prey
+n2hat <- eval(n2hat3) #Predator
+
+#Finding population trajectories for different starting populations
+out.pred1 <- ode(y = initialN1, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred2 <- ode(y = initialN2, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred3 <- ode(y = initialN3, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred4 <- ode(y = initialN4, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+
+#Plotting population trajectories
+plot(NA,xlim=c(0,1500),ylim=c(0,70),xlab="Prey Abundance", ylab="Predator Abundance",
+     main="Predator/Prey with Density Dependence and Satiation",las=1,pch=2,lwd=2)
+lines(out.pred1[,3]~out.pred1[,2],lwd=1.5,col="thistle")
+lines(out.pred2[,3]~out.pred2[,2],lwd=1.5,col="tomato")
+lines(out.pred3[,3]~out.pred3[,2],lwd=1.5,col="turquoise")
+lines(out.pred4[,3]~out.pred4[,2],lwd=1.5,col="violetred")
+points(n2hat~n1hat,pch=3,lwd=2)
+
+#Jacobian and eigenvalue
+n1 <- n1hat
+n2 <- n2hat
+jac <- matrix(c(eval(D(dn1,"n1")),eval(D(dn1,"n2")),eval(D(dn2,"n1")),eval(D(dn2,"n2"))),nrow=2,byrow=TRUE)
+lambda <- eigen(jac)
+lambda$values
+```
+
+Lastly, I increased the k-value one last time to try and produce an unstable focus equilibrium plot. I had to increase the k-value used prevously just over four times itself to produce what looked like an unstable focus equilibrium plot as it showed an ocillatory pattern. To verify this plot represented an unstable equilibrium I determined the eigenvalues of the jacobian matrix again and found that the values were imaginary and positive, which supported that this k-value produced an unstable focus equilirium. 
+
+```{r}
+#Increasing k-value again to attain a unstable focus among the coexisting population
+k <- 3500
+
+#Solving for the average equilibria population during coexistance for each species
+n1hat <- eval(n1hat3) #Prey
+n2hat <- eval(n2hat3) #Predator
+
+#Finding population trajectories for different starting populations
+out.pred1 <- ode(y = initialN1, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred2 <- ode(y = initialN2, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred3 <- ode(y = initialN3, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred4 <- ode(y = initialN4, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+
+#Plotting population trajectories
+plot(NA,xlim=c(0,3500),ylim=c(0,250),xlab="Prey Abundance", ylab="Predator Abundance",
+     main="Predator/Prey with Density Dependence and Satiation",las=1,pch=2,lwd=2)
+lines(out.pred1[,3]~out.pred1[,2],lwd=1.5,col="thistle")
+lines(out.pred2[,3]~out.pred2[,2],lwd=1.5,col="tomato")
+lines(out.pred3[,3]~out.pred3[,2],lwd=1.5,col="turquoise")
+lines(out.pred4[,3]~out.pred4[,2],lwd=1.5,col="violetred")
+points(n2hat~n1hat,pch=3,lwd=2)
+
+#Jacobian and eigenvalue
+n1 <- n1hat
+n2 <- n2hat
+jac <- matrix(c(eval(D(dn1,"n1")),eval(D(dn1,"n2")),eval(D(dn2,"n1")),eval(D(dn2,"n2"))),nrow=2,byrow=TRUE)
+lambda <- eigen(jac)
+lambda$values
+```
+
+## *Part 3*
+
+Part 3 takes a look at how certain parameter changes may affect any one of these equilibriums. I chose to study the stable focus equilibrium and how an increase in 'a' or a decrease in 'c' may affect the outcome of the plots generated.
+
+To start, I adjusted the 'a' value by increasing it from 0.01 to 0.05. The 'a' value is the coefficient relating prey-capture rate to the predator-prey collision rate, so it is a variable that tells us the amount of success a predator has in capturing its prey if it were to come into contact with it. By increasing this variables value, I increased the success rate that the predator had when it came into contact with its prey. As shown below, an increase in 'a' turned this stable focus equilibrium into an unstable focus equilibrium and made the plotted relationship more oscillatory. This represents that when the predator is more successful in capturing prey in this system it has a possibility to become less stable.
+
+
+```{r}
+#Setting parameters to be used for the following model where the 'a' variable was increased from 0.01 to 0.1
+r <- 0.7   #Intrinsic rate of increase of prey
+a <- 0.05   #Coefficient relating prey-capture rate to pred-prey-collision rate
+b <- 0.05  #Coefficient describing the number of prey captures needed to produce a predator
+d <- 0.12  #Death rate of predator
+c <- 10    #Coefficient for leveling off the asymptote
+
+#Adjusting these variables and then applying them to our unstable focus model with a k-value of 800
+k <- 800
+
+#Solving for the average equilibria population during coexistance for each species
+n1hat <- eval(n1hat3) #Prey
+n2hat <- eval(n2hat3) #Predator
+
+#Finding population trajectories for different starting populations
+out.pred1 <- ode(y = initialN1, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred2 <- ode(y = initialN2, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred3 <- ode(y = initialN3, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred4 <- ode(y = initialN4, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+
+#Plotting population trajectories
+plot(NA,xlim=c(0,1100),ylim=c(0,70),xlab="Prey Abundance", ylab="Predator Abundance",
+     main="Predator/Prey with Density Dependence and Satiation",las=1,pch=2,lwd=2)
+lines(out.pred1[,3]~out.pred1[,2],lwd=1.5,col="thistle")
+lines(out.pred2[,3]~out.pred2[,2],lwd=1.5,col="tomato")
+lines(out.pred3[,3]~out.pred3[,2],lwd=1.5,col="turquoise")
+lines(out.pred4[,3]~out.pred4[,2],lwd=1.5,col="violetred")
+points(n2hat~n1hat,pch=3,lwd=2)
+
+#Jacobian and eigenvalue
+n1 <- n1hat
+n2 <- n2hat
+jac <- matrix(c(eval(D(dn1,"n1")),eval(D(dn1,"n2")),eval(D(dn2,"n1")),eval(D(dn2,"n2"))),nrow=2,byrow=TRUE)
+lambda <- eigen(jac)
+lambda$values
+```
+
+Additionally, I adjusted the 'c' variable which is used for leveling off the asymptote of the plot. As seen previously, when 'c' was equal to 10, and compared to 'c' being equal to 5, as seen below, the asymptote where the equilibrium begins to be closed in on forms a tighter loop as the 'number'c' variable becomes smaller.
+
+```{r}
+#Setting parameters again but with c decreasing in value from 10 to 5
+r <- 0.7   #Intrinsic rate of increase of prey
+a <- 0.01  #Coefficient relating prey-capture rate to pred-prey-collision rate
+b <- 0.05  #Coefficient describing the number of prey captures needed to produce a predator
+d <- 0.12  #Death rate of predator
+c <- 5     #Coefficient for leveling off the asymptote
+
+#Adjusting these variables and then applying them to our unstable focus model with a k-value of 800
+k <- 800
+
+#Solving for the average equilibria population during coexistance for each species
+n1hat <- eval(n1hat3) #Prey
+n2hat <- eval(n2hat3) #Predator
+
+#Finding population trajectories for different starting populations
+out.pred1 <- ode(y = initialN1, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred2 <- ode(y = initialN2, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred3 <- ode(y = initialN3, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+out.pred4 <- ode(y = initialN4, times = 0:100, func = LVpred_satiate, parms=c(r=r,a=a,b=b,d=d,c=c,k=k),method="ode45")
+
+#Plotting population trajectories
+plot(NA,xlim=c(0,1500),ylim=c(0,70),xlab="Prey Abundance", ylab="Predator Abundance",
+     main="Predator/Prey with Density Dependence and Satiation",las=1,pch=2,lwd=2)
+lines(out.pred1[,3]~out.pred1[,2],lwd=1.5,col="thistle")
+lines(out.pred2[,3]~out.pred2[,2],lwd=1.5,col="tomato")
+lines(out.pred3[,3]~out.pred3[,2],lwd=1.5,col="turquoise")
+lines(out.pred4[,3]~out.pred4[,2],lwd=1.5,col="violetred")
+points(n2hat~n1hat,pch=3,lwd=2)
+
+#Jacobian and eigenvalue
+n1 <- n1hat
+n2 <- n2hat
+jac <- matrix(c(eval(D(dn1,"n1")),eval(D(dn1,"n2")),eval(D(dn2,"n1")),eval(D(dn2,"n2"))),nrow=2,byrow=TRUE)
+lambda <- eigen(jac)
+lambda$values
+```
+
+## *Part 4*
+
+When observing a Predator-Prey relationship a largely determining factor happens to be the prey's adunbance and carrying capacity. This can be seen as we continually increased the carrying capacity of the prey and observe the relationship model changeing forms throughout. It began at a minimum carrying capacity which was the minimum amount of prey that was needed to allow the predator population to survive. Without a great enough prey population the predators will have nothing to eat and begin to die off themselves if they are not able to adjust properly. When bringing the prey's carrying capacity just above minimum there is enough prey to satisfy the predator population to the point where the coexisting population can form a stable node equilibrium. When this carrying capacity is increased the model has an inherent tendancy to oscillate and possibly form from a stable focus to an unstanble focus equilibrium if the prey's carrying capacity becomes large enough. These oscillations begin to show that the abundance of the prey is largely dependent on certain properties of the predator, as well as the other way around where the abundance of the predator is largely dependent on certain properties of the prey. This requires much attention when possibly trying to control certain populations in case it may have adverse affects on other species populations that may not be intended.

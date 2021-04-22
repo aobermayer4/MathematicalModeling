@@ -1,0 +1,323 @@
+---
+title: "Assignment 7"
+author: "Durieux_Obermayer_Sheth"
+date: "11/22/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+## **Packages**
+
+```{r packages, message=FALSE, warning=FALSE}
+#Load required packages
+library(Ryacas)
+library(deSolve)
+```
+
+## **WorkPlan**
+
+Me(Vyoma) and Alyssa both looked at the assignment on our own, tried to have a clear understanding of the question and then discussed our ideas on MS teams by sharing the screen. We both worked equally in writing the code for the assignment and answering questions. We sent each other the updated versions of the Rmd file to make changes as per one's convenience.
+
+## **pCO2 and DeltaT Rate of Change**
+
+When looking to the future, it is important to get guidance from the past and present to gain a better understanding of the dynamics of our ecosystem and how our trajectory might play out. Previously we projected global carbon pools with constant pCO2 and DeltaT values, though this does not paint a realistic picture. Over time our ecosystem is constantly changing and these rates can vary day by day but tend to have an overall trend of increasing in metric. By looking back we can evaluate how these rates changed over time and apply that knowledge to see how they may continue to change and obtain a more accurate representation of our future carbon pool levels.
+
+To apply this in our model we took the pCO2 value from 1990, which was given in the literature, and created a linear model with the latest pCO2 value from 2020, which was obtained from climate.gov. This produced the slope, or the rate of change of pCO2, which we implemented in our pCO2 expression for rate of change that will be used later. Additionally, below is a plot of the change in log(pCO2) from 1990 to 2070, being that this log plot is linear shows that the pCO2 value is actually increasing exponentially over time.
+
+Furthermore, the overall temperature of our global ecosystem is also constantly in flux, though trending upwards overtime. The global temperature is give by the variable DeltaT which represents the difference between the average annual global temperature in a given year and the long-term average. So, just as we did above, we looked to the past and obtained DeltaT values from 1870 within the literature and got values for 2020 from Climate.gov. These were used to create an expression which represents the rate of change of DeltaT over time from the past and will be applied to see how it will change over the future. This expression was then used to plot the change in DeltaT over the years 2020-2070 to visualize the steadily increasing trend. While these numbers may seem relatively small, given the immense size and heat capacity of the global oceans, it requires a massive amount of energy to generate this change.
+
+*pCO2 Rate of Change*
+
+```{r}
+#pCO2 rate of change 1990-2020
+pCO2.r <- lm(log(c(350,413))~c(1990,2020)) #log linear model to solve for intercept and slope
+a.lm <- pCO2.r$coefficients[2] #slope
+pco2_gw <- parse(text=paste("413*exp(",a.lm,"*t)",sep="")) #pCO2 rate expression
+
+#Use 1990-2020 pCO2 rate of change to predict and plot 2020-2070
+plot(NA, type="l", 
+     xlim=c(2020,2070), ylim=c(log(400),log(550)), 
+     xlab="Year (2020-2070)", ylab="log(pCO2)", 
+     main="log(pCO2) Projected Values 2020-2070")
+abline(pCO2.r)
+```
+
+*DeltaT Rate of Change*
+
+```{r}
+#DeltaT rate of change 1870-2020
+A <- matrix(data=c(1, 1, (1870-1990), (2020-1990)), nrow=2, ncol=2, byrow=FALSE)    
+B <- matrix(data=c(-0.5, 0.9), nrow=2, ncol=1, byrow=FALSE)
+solution<-solve(A, B)
+b <- 0.9 #y-int starting at 0.9 deltaT in 2020
+c <- solution[2] #slope
+deltat_gw <- parse(text=paste(b,'+',c,'*t' )) #deltaT rate expression
+
+#Use 1870-2020 DeltaT rate of change to predict and plot 2020-2070
+deltat.r <- expression(c*t+b) #rewrite expression for r
+t <- seq(0,51) #set amount of years to solve deltaT for
+deltat.rv <- eval(deltat.r) #Solve for deltaT values over time
+deltat.d <- cbind(2020:2071,deltat.rv) #column bind year,deltaT values
+plot(deltat.d, type="l", 
+     xlim=c(2020,2070), ylim=c(0,2), 
+     xlab="Year (2020-2070)", ylab="DeltaT", 
+     main="Delta-T Projected Values 2020-2070",
+     xaxs="i",yaxs="i")
+
+```
+
+## **Gross Primary Production**
+
+Gross Primary Production (GPP) refers to the overall input rate of carbon into the biosphere and is determined by the pCO2 and DeltaT values that were described above as well as plant biomass, with regard to how much light that biomass may capture. This expression follows a dynamic interaction between CO2 and global temperature, whereas an increase in global temperature causes plants to respire faster which will further speed up decomposition and release CO2 into the atmosphere. This increase in CO2 will result in plants photosynthesizing faster and removing CO2 from the atmosphere. This proportionality shows that as pCO2 and DeltaT increase, so does GPP for the biosphere.
+
+In this model, we use a submodel of GPP to represent a perturbation scenario that will help determine to pCO2 distribution into the five compartments of the biosphere carbon exchange. Additionally, we obtained the respiration rate (r) and the coefficient relating respiration and decomposition to global temperature (nu) from the literature and noted that this scenario will be run over 80 years, from 1990-2070. These values, along with the pCO2 and DeltaT rate of change expressions we previously determined, allowed us to find the GPP (g) and decomposition rate (d) which will all be used in determining the equilibrium values of the carbon pools.
+
+```{r}
+gpp <- expression(151.2820512820513*exp(4.3e-2*deltat)*pco2*
+                    (-log(-1.475*pco2*exp(4.3e-2*deltat)/
+                            (-5.9*exp(4.3e-2*deltat)*pco2+383*r*exp(nu*deltat)+
+                               r*exp(nu*deltat)*pco2))+0.2231435513142098)/(383+pco2))
+
+r <- 0.39 #respiration rate
+nu <- 0.086 #coef relating respiration&decomposition to global temp
+t <- 80 #time
+
+#evaluate g (gross primary production) and d (decomposition rate)
+pco2 <- eval(pco2_gw) 
+deltat <- eval(deltat_gw)
+g <- eval(gpp)
+d <- exp(nu*deltat)
+```
+
+## **Solving for Carbon Pool Equilibrium**
+
+With preforming this GPP submodel for perturbation in the biosphere, we want to find the equilibrium values that had been perturbed. To start, we look at the equation for each dynamic within the biosphere: metabolic (x2), structural (x2), metabolic litter (x3), structural litter (x4), and soil (x5). These streams of carbon flow are solved for their equilibrium which are noted by their x-terms (1-5), which presents us with the equilibrium terms of each carbon pool. 
+
+```{r}
+#Dynamics in the biosphere
+dx1 = expression(0.65*0.8*(g-r*d*x1)-x1/2)
+dx2 = expression(0.35*0.8*(g-r*d*x1)-x2/33)
+dx3 = expression(x1/2-d*(1+1/100)*x3)
+dx4 = expression(x2/33-d*(1/20+1/100)*x4)
+dx5 = expression(d*((x3+x4)/100-x5/400))
+
+#solving for the x terms - equilibrium
+x1hat = expression(26*g/(26*r*d+25))
+x2hat = expression(231*g/(26*r*d+25))
+x3hat = expression(12.87128712871287*g/(26*r*d+25))
+x4hat = expression(116.6666666666667*g/(26*r*d+25))
+x5hat = expression(518.1518151815182*g/(26*r*d+25))
+
+#evaluate equilibrium
+x1hat_n <- eval(x1hat)
+x2hat_n <- eval(x2hat)
+x3hat_n <- eval(x3hat)
+x4hat_n <- eval(x4hat)
+x5hat_n <- eval(x5hat)
+```
+
+## **Plotting Carbon Pools Over Time**
+
+Lastly, with this information we can plot the dynamics of these carbon pools and fluxes over time with changing pCO2 and DeltaT values. To do this, we used our biosphere function to integrate the differential equations and produce trajectories. This function is used to evaluate GPP and decomposition rate anew with each run to look at the change with the global scenario, as well as the global consistency. From the literature we obtain the starting carbon pool values from 1990 which take the place of our y-intercept which we will project over 80 years (1990-2070). With all the parameters we generate an out file of the numerical projections for the five carbon pools over the 80 years and total them along with the equilibrium values and plot this data.
+
+```{r}
+biosphere <- function(t, x, parms){
+  g=eval(gpp)
+  d=exp(nu*deltat)
+  with(as.list(parms), {
+    xdot1 <- 0.65*0.8*(g-r*d*x[1])-x[1]/2
+    xdot2 <- 0.35*0.8*(g-r*d*x[1])-x[2]/33
+    xdot3 <- x[1]/2-d*(1+1/100)*x[3]
+    xdot4 <- x[2]/33-d*(1/20+1/100)*x[4]
+    xdot5 <- d*((x[3]+x[4])/100-x[5]/400)
+    list(c(xdot1,xdot2,xdot3,xdot4,xdot5))
+  })
+}
+
+x1990 <- c(77,639,30,313,1217) #These are starting values for 1990 carbon pools
+time=80 #plotting over 80 years
+#out produces x1-5 values over 80 years using biosphere function
+out <- ode(y = x1990, times = seq(0,time), func = biosphere,
+           parms=c(pco2=pco2_gw,deltat=deltat_gw,gpp=gpp,r=r,nu=nu),method="ode45")
+
+#total carbon in biosphere
+x_total <- rowSums(out[,2:6])
+#total carbon at equilibrium
+xhat_total <- x1hat_n+x2hat_n+x3hat_n+x4hat_n+x5hat_n
+```
+
+In the figure below, we see the five carbon pools and the total mass of carbon trajectories overtime as well as the equilibrium points for each line with dynamic pCO2 and DeltaT values. They all seem to be ever so slightly headed towards there equilibrium point after the perturbation scenario that was simulated. To look further into this we can evaluate the Jacobian to analyze the stability of this ecosystem. As seen below, the Jacobian consists of all negative values which show that this is a stable equilibrium. Moreover, the most dynamic pool, Metabolic, shows the fastest rate of approaching equilibrium, while the Soil shows the slowest rate to of approaching equilibrium, this can relate back to the amount of carbon in this pool being so large that it will take much longer to get back to equilibrium on a global scale.
+
+```{r}
+#Figure showing the carbon pools over 80 years
+par(oma=c(0,0,0,5))
+plot(x_total~out[,1],type="l",lwd=2,ylim=c(0,3700),col="#70362A",
+     xlab="Years from 1990",ylab="Mass of carbon (Pg)",
+     main="Carbon Pools with Dynamic pCO2 and Temperature")
+lines(out[,6]~out[,1],lwd=2,col="#A17C22") #soil
+lines(out[,3]~out[,1],lwd=2,col="#DEBF7E") #structural
+lines(out[,5]~out[,1],lwd=2,col="#D5673B") #structural littler
+lines(out[,2]~out[,1],lwd=2,col="#BE5634") #metabolic
+lines(out[,4]~out[,1],lwd=2,col="#B5AD15") #metabolic litter
+points(c(xhat_total,x1hat_n,x2hat_n,x3hat_n,x4hat_n,x5hat_n)~rep(80,6),pch=8,
+       col=c("#70362A","#BE5634","#DEBF7E","#B5AD15","#D5673B","#A17C22"))
+legend(x=84,y=2500,legend=c("xTotal","x1","x2","x3","x4","x5"),lty=1,lwd=2,
+       col=c("#70362A","#BE5634","#DEBF7E","#B5AD15","#D5673B","#A17C22"),xpd=NA)
+
+jac <- matrix(c(eval(-0.520*r*d-1/2),0,0,0,0,
+                        eval(-0.280*r*d),-1/33,0,0,0,
+                        1/2,0,eval(-101/100*d),0,0,
+                        0,1/33,0,eval(-3/50*d),0,
+                        0,0,eval(1/100*d),eval(1/100*d),eval(-1/400*d)),
+                nrow=5,byrow=TRUE)
+Lambda <- eigen(eval(jac))$values
+Pools <- list("Metabolic (x1)", "Structural (x2)", "Metabolic Litter (x3)", "Structural Litter (x4)", "Soil (x5)")
+equpool <- cbind(Pools,Lambda)
+equpool
+```
+
+## **Plotting Carbon Fluxes Over Time**
+
+Additionally, we took a look at the carbon flux over time with dynamic pCO2 and DeltaT values. Carbon flux represents the amount of carbon exchanged between the carbon pools of the ecosystem. These values come from respiration (x1), construction costs (x2), decomposition of metabolic litter (x3), decomposition of structural litter (x4), and decomposition of soil (x5). This figure shows that the majority of our ability to take up carbon happens immediately and then levels off over time as it approaches equilibrium.
+
+```{r}
+#Fluxes
+gpp_projected <- g * rep(1,time+1)
+flux1 <- r*d*out[,2]
+flux2 <- 0.2*(gpp_projected-r*d*out[,2])
+flux3 <- d*out[,4]
+flux4 <- d*out[,5]/20
+flux5 <- d*out[6]/400
+flux_total <- flux1+flux2+flux3+flux4+flux5
+flux1hat <- r*d*x1hat_n
+flux2hat <- 0.2*(g-r*d*x1hat_n)
+flux3hat <- d*x3hat_n
+flux4hat <- d*x4hat_n/20
+flux5hat <- d*x5hat_n/400
+fluxhat_total <- flux1hat+flux2hat+flux3hat+flux4hat+flux5hat
+
+subtime <- 80
+par(oma=c(0,0,0,5))
+plot(flux_total[1:subtime]~out[1:subtime,1],type="l",lwd=2,ylim=c(0,160),col="#70362A",
+     xlab="Years from 1990",ylab="Flux of carbon (Pg)",
+     main="Carbon Flux with Dynamic pCO2 and Temperature")
+lines(gpp_projected[1:subtime]~out[1:subtime,1],lwd=2,col="#829D36")
+lines(flux5[1:subtime]~out[1:subtime,1],lwd=2,col="#A17C22") #decomposition of x5
+lines(flux2[1:subtime]~out[1:subtime,1],lwd=2,col="#DEBF7E") #construction costs
+lines(flux4[1:subtime]~out[1:subtime,1],lwd=2,col="#D5673B") #decomposition of x4
+lines(flux1[1:subtime]~out[1:subtime,1],lwd=2,col="#BE5634") #respiration
+lines(flux3[1:subtime]~out[1:subtime,1],lwd=2,col="#B5AD15") #decomposition of x3
+points(c(fluxhat_total,flux1hat,flux2hat,flux3hat,flux4hat,flux5hat)~rep(80,6),pch=8,
+       col=c("#70362A","#BE5634","#DEBF7E","#B5AD15","#D5673B","#A17C22"))
+legend(x=83,y=125,legend=c("GPP","TotalFlux","x1","x2","x3","x4","x5"),lty=1,lwd=2,
+       col=c("#829D36","#70362A","#BE5634","#DEBF7E","#B5AD15","#D5673B","#A17C22"),xpd=NA)
+
+```
+
+## **Extra Credit**
+
+RCP - Representative Concentration pathways developed scenarios which show the global climate change till 2100. These scenarios are not based on the predictions but show the possible outcomes of certain decision taken. They use data collected till 2005 and predict the climate change based on the CO2 emissions, temperature change and many other factors. Scenario 8.5 is the worst case scenario as it uses extreme conditions may possibly occur if certain measures are not taken. 
+
+When modeling scenario we have to take into consideration various factors and carbon footprints from many aspects of society, such as industries emitting gases, CO2 influx from transportation, possible increased usage of electricity over time. All these factors and more represent 'Human activities releasing CO2'. In the case of global climate change, the respiration and decomposition of CO2 has exceeded the amount of photosynthesis done by plants and more CO2 gases are being released in the atmosphere which as described previously is proportional to an increase in temperature, as they closely relate.
+
+In our attempt to project the RCP 8.5 scenario we looked into various research papers to get ideas of the possible trajectory we may be on and went of that to try an simulate it for ourselves. In a numerical sense, we went off numbers obtained from a NOAA climate model predicting pCO2 levels to rise to 936 ppm and global temperature to increase to around 5-6 degrees Celsius. With these numbers we found a new rate of change for pCO2 and DeltaT which we applied to our function over 80 years. Additionally, we went back to our previous model and generated the projected individual carbon pool data for 2020 to begin our simulation at.
+
+Together with this information we were able to generate a possible trajectory of the individual carbon pool mass over the next 80 years till 2100. This shows a drastic change in equilibrium when compared to their individual pools which takes us to looking at their Jacobian values. When analyzed they are all negative showing that they are stable but when compared to the previous Jacobian values in the model above they have increased or stayed equal. This reflects that the increase in rate of change of pCO2 and DeltaT may also play a role in the increase in rate of the carbon levels reaching their equilibrium state.
+
+Overall, when plotting this scenario, it is difficult to take into effect every aspect of the ecosystem, especially the role that human society may play and the variation in certain parameters that may be accurate currently but may vary widely in the future. Two variables that stick out in the scenario we modeled were the respiration rate (r) and the coefficient relating respiration and decomposition to global temperature (nu). These have a large possibility to vary in the future depending on the amount of biomass in the ecosystem, which in turn can be affected by aspects like logging and development. The values we used for these parameters were from 1990 and could be more up-to-date. With these updated parameters as well as possibly applying other variables that may have more indirect affects could allow us to achieve a more solid model to project scenarios.
+
+```{r}
+#pCO2 rate of change 2020-2100
+pCO2.r <- lm(log(c(413,936))~c(2020,2100))
+a.lm <- pCO2.r$coefficients[2]
+pco2_gw <- parse(text=paste("936*exp(",a.lm,"*t)",sep=""))
+
+deltat.r <- lm(c(0.9,5.5)~c(2020,2100))
+b <- 0.9
+c <- deltat.r$coefficients[2]
+deltat_gw <- parse(text=paste(b,'+',c,'*t' ))
+
+r <- 0.39 #respiration rate
+nu <- 0.086 #coef relating respiration&decomposition to global temp
+t <- 80 #time
+
+#evaluate g (gross primary production) and d (decomposition rate)
+pco2 <- eval(pco2_gw) 
+deltat <- eval(deltat_gw)
+g <- eval(gpp)
+d <- exp(nu*deltat)
+
+#Dynamics in the biosphere
+dx1 = expression(0.65*0.8*(g-r*d*x1)-x1/2)
+dx2 = expression(0.35*0.8*(g-r*d*x1)-x2/33)
+dx3 = expression(x1/2-d*(1+1/100)*x3)
+dx4 = expression(x2/33-d*(1/20+1/100)*x4)
+dx5 = expression(d*((x3+x4)/100-x5/400))
+
+#solving for the x terms - equilibrium
+x1hat = expression(26*g/(26*r*d+25))
+x2hat = expression(231*g/(26*r*d+25))
+x3hat = expression(12.87128712871287*g/(26*r*d+25))
+x4hat = expression(116.6666666666667*g/(26*r*d+25))
+x5hat = expression(518.1518151815182*g/(26*r*d+25))
+
+#evaluate equilibrium
+x1hat_n <- eval(x1hat)
+x2hat_n <- eval(x2hat)
+x3hat_n <- eval(x3hat)
+x4hat_n <- eval(x4hat)
+x5hat_n <- eval(x5hat)
+
+x2020 <- c(107,829,46,338,1236) #These are starting values for 2020 carbon pools
+time=80
+out <- ode(y = x2020, times = seq(0,time), func = biosphere,
+           parms=c(pco2=pco2_gw,deltat=deltat_gw,gpp=gpp,r=r,nu=nu),method="ode45")
+
+#total carbon in bioshere
+x_total <- rowSums(out[,2:6])
+
+#total carbon at equilibrium
+xhat_total <- x1hat_n+x2hat_n+x3hat_n+x4hat_n+x5hat_n
+
+#Figure showing the carbon pools
+par(oma=c(0,0,0,5))
+plot(x_total~out[,1],type="l",lwd=2,ylim=c(0,6000),col="#70362A",
+     xlab="Years from 2020",ylab="Mass of carbon (Pg)",
+     main="Carbon Pools with Dynamic pCO2 and Temperature")
+lines(out[,6]~out[,1],lwd=2,col="#A17C22")
+lines(out[,3]~out[,1],lwd=2,col="#DEBF7E")
+lines(out[,5]~out[,1],lwd=2,col="#D5673B")
+lines(out[,2]~out[,1],lwd=2,col="#BE5634")
+lines(out[,4]~out[,1],lwd=2,col="#B5AD15")
+points(c(xhat_total,x1hat_n,x2hat_n,x3hat_n,x4hat_n,x5hat_n)~rep(80,6),pch=8,
+       col=c("#70362A","#BE5634","#DEBF7E","#B5AD15","#D5673B","#A17C22"))
+legend(x=84,y=2500,legend=c("xTotal","x1","x2","x3","x4","x5"),lty=1,lwd=2,
+       col=c("#70362A","#BE5634","#DEBF7E","#B5AD15","#D5673B","#A17C22"),xpd=NA)
+
+jac2 <- matrix(c(eval(-0.520*r*d-1/2),0,0,0,0,
+                        eval(-0.280*r*d),-1/33,0,0,0,
+                        1/2,0,eval(-101/100*d),0,0,
+                        0,1/33,0,eval(-3/50*d),0,
+                        0,0,eval(1/100*d),eval(1/100*d),eval(-1/400*d)),
+                nrow=5,byrow=TRUE)
+
+Lambda2 <- eigen(eval(jac2))$values
+Pools2 <- list("Metabolic (x1)", "Structural (x2)", "Metabolic Litter (x3)", "Structural Litter (x4)", "Soil (x5)")
+equpool2 <- cbind(Pools2,Lambda2)
+equpool2
+```
+
+References:
+
+1) https://climate.gov/news-features/understanding-climate/climate-change-atmospheric-carbon-dioxide
+
+2) https://climate.gov/news-features/understanding-climate/climate-change-global-temperature
+
+3) https://sos.noaa.gov/datasets/climate-model-temperature-change-rcp-85-2006-2100/
+
+4) Christopher R. Schwalm, Spencer Glendon, Philip B. Duff. RCP8.5 tracks cumulative CO2 emissions.
+      Proceedings of the National Academy of Sciences Aug 2020, 117 (33) 19656-19657; DOI: 10.1073/pnas.2007117117
+

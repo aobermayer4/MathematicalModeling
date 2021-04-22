@@ -1,0 +1,154 @@
+---
+title: 'Assignment #4'
+author: "Sarita Emmanuel"
+date: "12/10/2020"
+output: html_document
+---
+
+
+# Question 1: Workplan (3 pts)
+### Describe your work plan for this assignment. Have you changed anything from the first group assignment?
+## Platform
+*We decided to use MS Teams as the platform for our group work. We spent a few days reviewing, and then reached out in the MS team chat, to gauge how close to completion each of us were. Based on this, we decided on a meeting time for review. We used MS Team video calling for the discussion and for review of the R markdown sheets. We each took a turn in sharing the code, and explaining what we did for the question that was assigned, using the share screen option on Ms Teams.*   
+
+## Points: 
+*We discussed the use of 'for loops' and some of the difficulty that we experienced trying to use it. We also searched github and other resources for similar topics that can help supplement the understanding of the applied code,related to the topic.* 
+
+
+```{r}
+library(Ryacas)
+library(deSolve)
+
+```
+# Question 3
+### Use the idea of adaptive topography to describe a case of heterozygote advantage (as in Figure 5.14). You may choose any biologically plausible values that results in a stable equilibrium with 0.5 < p < 1, where p is the proportion of A1 in a two allele system. Show the result in a plot and give the equilibrium value of p.
+
+```{r}
+#create a vector of the p (A1) values 
+p<- seq(0,1,0.01)
+#create a vector of the s (strength of selection) values that will range from 0.1-1.0 in increments of 0.075.
+s<- seq(0.1,1,0.075)
+
+#The heterozygote  advantage will occur  under conditions where the relative fitness of the heterozygote is higher than either homozygote. Therefore regardless of the range in the strength of selection values (s), the measures of fitness (w) for the homozygotes has to be less than the heterozygotes.   
+#w11 = 1-s
+#w12 = 1
+#w22 = 1-s
+
+#the initial Hardy-Weinberg law shows the gene pool fractions. 
+# 1= p^2 + 2p(1-p) + (1-p)^2
+
+#Therefore in order to find the average fitness (w-bar) in relation to the actual allele (A1), we use the proportions we have created above  in (s), in the w-bar equation, which is derived from the original Hardy -Weinberg law. 
+
+#To make the iterations, a for loop was constructed, with wBAR undefined now, to later hold the values derived. 
+wBAR <- NULL
+for (i in 1: length(s)){
+    wBAR[[i]] <- (1-s[i])*p^2 +2*p*(1-p)*1 + ((1-s[i])*(1-p)^2)   #calculate average fitness
+  }
+
+(length(s))
+```
+
+### Using a plot, we can visualise the values and determine he stable equilibrium. The plot shows how the dependent variable (wBAR-fitness) on y is influenced by the predictor variable p ( genes) on the x axis. 
+#### Derive the remainder of values from the average fitness. "lines" adds these the plot with them. This loop calculates the avg. fitness for the remainder values. 
+```{r}
+plot(wBAR[[1]]~p, type="l", lwd=2, ylim=c(0,1),xlab="Fraction of A1 in gene pool",ylab="Average relative selective value")
+cl<- topo.colors(12)  
+for(i in 2:13) {              
+    lines(wBAR[[i]]~p, lty = 1, lwd=2, col= cl [i-1])   
+    }
+abline ( v= p[50], lty=5, col="red")
+
+legend (0.0,0.2, c("0.075", "0.15", "0.225","0.3", "0.375","0.45", "0.525", "0.6", "0.675", "0.75", "0.825", "0.9","0.975", "1"), lty=1, col= c( "black", cl), cex=0.5, title ="s", ncol=4)
+
+```
+## Discussion:
+*Heterozygote advantage occurs when the heterozygous genotype has a higher relative fitness than either the homozygous dominant or homozygous genotype.An adaptive landscape shows the relationship between fitness (vertical axis) and one or several traits or genes (horizontal axis). An adaptive landscape therefore can be looked at as a  form of response,  describing how a dependent variable (fitness) (y axis) is influenced by the predictor variable, the traits or genes (x axis).*
+
+*This model ran a range of 13 values using increments of the proportion 0.075, in order to obtain the the average population fitness values (wbar) to find the maximum. Therefore, if the relative fitness does not depend on p (A1), the gene pool changes represents the population climbing upwards on the w-bar curve, obtaining the gene combination with the highest fitness at the peak.Hence the w-bar curve is termed the 'adaptive' topography, and natural selection is seen as the reason for this upward movement to the nearest peak on the curve. In this graph stability occurs at 0.5, showing heterozygote advantage. As the strength of fitness changes (s), natural selection improves a species' adaptation to its environment. The average relative fitness changes over time, until the equilibrium is reached.*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
